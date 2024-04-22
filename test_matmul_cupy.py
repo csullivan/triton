@@ -26,17 +26,12 @@ BLOCK_K = 32
 
 # Create random matrices A and B and an output matrix C
 
-A = torch.full((M, K), 1.0, dtype=torch.float32, device="cuda")
-B = torch.full((K, N), 1.0, dtype=torch.float32, device="cuda")
+A = torch.full((M, K), 1.0, dtype=torch.float8_e5m2, device="cuda")
+B = torch.full((K, N), 1.0, dtype=torch.float8_e5m2, device="cuda")
 C = torch.full((M, N), 0.0, dtype=torch.float32, device="cuda")
-# B = cp.ones((K, N)).astype(cp.float32)
-# C = cp.zeros((M, N), dtype=cp.float32)
-# A = cp.ones((M, K)).astype("float8_e5m2")
-# B = cp.ones((K, N)).astype("float8_e5m2")
-# C = cp.zeros((M, N), dtype="float8_e5m2")
-# import ipdb
-
-# ipdb.set_trace()
+A_f32 = A.to(torch.float32)
+B_f32 = B.to(torch.float32)
+golden = torch.matmul(A_f32, B_f32)
 
 
 # Set the strides for each matrix
@@ -76,14 +71,9 @@ print("Output Matrix C:")
 print(C)
 
 
-A_torch = torch.from_numpy(cp.asnumpy(A))
-B_torch = torch.from_numpy(cp.asnumpy(B))
-golden = torch.matmul(A_torch, B_torch)
-
 print("Ref: ")
 print(golden)
 
 golden = torch.nn.functional.normalize(golden)
-res = torch.from_numpy(cp.asnumpy(C))
-res = torch.nn.functional.normalize(res)
-assert_close(res, golden, rtol=1e-2, atol=1e-3, check_dtype=False)
+C = torch.nn.functional.normalize(C)
+assert_close(C, golden, rtol=1e-2, atol=1e-3, check_dtype=False)

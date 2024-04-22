@@ -192,8 +192,8 @@ def test_gemm(
         return grid
 
     # # TODO(csullivan): fp8
-    # a = a.to(torch.float8_e5m2)
-    # b = b.to(torch.float8_e5m2)
+    a = a.to(torch.float8_e5m2)
+    b = b.to(torch.float8_e5m2)
     print("stride_am=", a.stride(0))
     print("stride_ak=", a.stride(1))
     print("stride_bk=", b.stride(0))
