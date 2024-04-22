@@ -228,11 +228,8 @@ def test_gemm(
         num_stages=NUM_STAGES,
     )
 
-    # import ipdb
-
-    # ipdb.set_trace()
-    # with open("matmul.ptx", "w") as a:
-    #     print(pgm.asm["ptx"], file=a)
+    with open("matmul.ptx", "w") as a:
+        print(pgm.asm["ptx"], file=a)
     with open("matmul.ttir", "w") as a:
         print(pgm.asm["ttir"], file=a)
     with open("matmul.ttgir", "w") as a:
@@ -242,7 +239,5 @@ def test_gemm(
     torch.set_printoptions(profile="full")
     golden = torch.nn.functional.normalize(golden)
     z = torch.nn.functional.normalize(z)
-    import ipdb
 
-    ipdb.set_trace()
     assert_close(z, golden, rtol=1e-2, atol=1e-3, check_dtype=False)

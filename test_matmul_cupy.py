@@ -1,6 +1,7 @@
 import torch
 from torch.testing import assert_close
 import cupy as cp
+import ml_dtypes
 
 
 def ceildiv(a, b):
@@ -24,14 +25,24 @@ BLOCK_N = 16
 BLOCK_K = 32
 
 # Create random matrices A and B and an output matrix C
-A = cp.ones((M, K)).astype(cp.float32)
-B = cp.ones((K, N)).astype(cp.float32)
-C = cp.zeros((M, N), dtype=cp.float32)
+
+A = torch.full((M, K), 1.0, dtype=torch.float32, device="cuda")
+B = torch.full((K, N), 1.0, dtype=torch.float32, device="cuda")
+C = torch.full((M, N), 0.0, dtype=torch.float32, device="cuda")
+# B = cp.ones((K, N)).astype(cp.float32)
+# C = cp.zeros((M, N), dtype=cp.float32)
+# A = cp.ones((M, K)).astype("float8_e5m2")
+# B = cp.ones((K, N)).astype("float8_e5m2")
+# C = cp.zeros((M, N), dtype="float8_e5m2")
+# import ipdb
+
+# ipdb.set_trace()
+
 
 # Set the strides for each matrix
-stride_am, stride_ak = (s // cp.dtype(A.dtype).itemsize for s in A.strides)
-stride_bk, stride_bn = (s // cp.dtype(A.dtype).itemsize for s in B.strides)
-stride_zm, stride_zn = (s // cp.dtype(A.dtype).itemsize for s in C.strides)
+stride_am, stride_ak = A.stride()
+stride_bk, stride_bn = B.stride()
+stride_zm, stride_zn = C.stride()
 
 # Set grid and block sizes for the kernel launch
 block = (128, 1, 1)
@@ -43,32 +54,13 @@ shared_memory_size = 32 * 1024
 
 
 # Launch the kernel
-print(
-    grid,
-    block,
-    (
-        A.data.ptr,
-        B.data.ptr,
-        C.data.ptr,
-        int(stride_am),
-        int(stride_ak),
-        int(stride_bk),
-        int(stride_bn),
-        int(stride_zm),
-        int(stride_zn),
-        M,
-        N,
-        K,
-    ),
-    shared_memory_size,
-)
 matmul_kernel(
     grid,
     block,
     (
-        A.data.ptr,
-        B.data.ptr,
-        C.data.ptr,
+        A.data_ptr(),
+        B.data_ptr(),
+        C.data_ptr(),
         int(stride_am),
         int(stride_bk),
         int(stride_zm),
