@@ -360,9 +360,7 @@ static void decomposeMixedModeDotOp(ModuleOp mod, int computeCapability) {
       bool isNativeFP8 = AElType.isFloat8E5M2() || AElType.isFloat8E4M3FNUZ();
       // promote operands for sm < 89 since fp8 mma is not natively supported
       // promote operands for sm >= 90 when mma is not v3
-      if (!isNativeFP8 ||
-          (isNativeFP8 && (computeCapability == 89 || mmaLayout.isHopper())))
-        return;
+      return;
       promoteType = builder.getF16Type();
     } else {
       // FMA case.
@@ -372,6 +370,7 @@ static void decomposeMixedModeDotOp(ModuleOp mod, int computeCapability) {
         return;
       promoteType = DElType;
     }
+    std::cout << "2112 Promoting MMA to FP16\n";
     Location loc = dotOp.getLoc();
     Value promotedA = promoteOperand(builder, loc, dotOp.getA(), promoteType);
     Value promotedB = promoteOperand(builder, loc, dotOp.getB(), promoteType);

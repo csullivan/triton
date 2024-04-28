@@ -97,6 +97,7 @@ def matmul_kernel(
         a_tile_ptr = tl.advance(a_tile_ptr, [0, BLOCK_K])
         b_tile_ptr = tl.advance(b_tile_ptr, [BLOCK_K, 0])
 
+    z = z / 2
     z = z.to(out_dtype)
 
     tl.store(z_ptrs, z, mask=mask)
@@ -116,7 +117,7 @@ def matmul_kernel(
             num_stages,
         )
         for shape_w_c in [
-            [64, 16, 32, 4, 1, 128, 256, 64],
+            [16, 16, 32, 4, 1, 128, 256, 64],
         ]
         for out_dtype in ["float32"]
         for trans_a in [False]
@@ -151,21 +152,21 @@ def test_gemm(
     K = BLOCK_K if K is None else K
 
     if TRANS_A:
-        # a = torch.randn((K, M), device="cuda", dtype=input_dtype).T
-        a = torch.full((K, M), 1.0, dtype=input_dtype, device="cuda").T
+        a = torch.randn((K, M), device="cuda", dtype=input_dtype).T
+        # a = torch.full((K, M), 1.0, dtype=input_dtype, device="cuda").T
         a_order = [0, 1]
     else:
-        # a = torch.randn((M, K), device="cuda", dtype=input_dtype)
-        a = torch.full((M, K), 1.0, dtype=input_dtype, device="cuda")
+        a = torch.randn((M, K), device="cuda", dtype=input_dtype)
+        # a = torch.full((M, K), 1.0, dtype=input_dtype, device="cuda")
         a_order = [1, 0]
 
     if TRANS_B:
-        # b = torch.randn((N, K), device="cuda", dtype=input_dtype).T
-        b = torch.full((N, K), 1.0, dtype=input_dtype, device="cuda").T
+        b = torch.randn((N, K), device="cuda", dtype=input_dtype).T
+        # b = torch.full((N, K), 1.0, dtype=input_dtype, device="cuda").T
         b_order = [0, 1]
     else:
-        # b = torch.randn((K, N), device="cuda", dtype=input_dtype)
-        b = torch.full((K, N), 1.0, dtype=input_dtype, device="cuda")
+        b = torch.randn((K, N), device="cuda", dtype=input_dtype)
+        # b = torch.full((K, N), 1.0, dtype=input_dtype, device="cuda")
         b_order = [1, 0]
 
     assert out_dtype == "float32"
@@ -173,17 +174,17 @@ def test_gemm(
     torch_out_dtype = torch.float32
 
     if TRANS_OUTPUT:
-        z = torch.full((N, M), 1.0, device="cuda", dtype=torch_out_dtype).T
+        z = torch.full((N, M), 0.0, device="cuda", dtype=torch_out_dtype).T
         z_order = [0, 1]
     else:
-        z = torch.full((M, N), 1.0, device="cuda", dtype=torch_out_dtype)
+        z = torch.full((M, N), 0.0, device="cuda", dtype=torch_out_dtype)
         z_order = [1, 0]
 
     # torch result
     a_f32 = a.to(torch.float32)
     b_f32 = b.to(torch.float32)
-    a_f32 = a.to(torch.float8_e5m2).to(torch.float16)
-    b_f32 = b.to(torch.float8_e5m2).to(torch.float16)
+    a_f32 = a.to(torch.float8_e4m3fn).to(torch.float16)
+    b_f32 = b.to(torch.float8_e4m3fn).to(torch.float16)
     golden = torch.matmul(a_f32, b_f32).to(torch.float32)
 
     def grid(META):
@@ -192,8 +193,8 @@ def test_gemm(
         return grid
 
     # # TODO(csullivan): fp8
-    a = a.to(torch.float8_e5m2)
-    b = b.to(torch.float8_e5m2)
+    a = a.to(torch.float8_e4m3fn)
+    b = b.to(torch.float8_e4m3fn)
     print("stride_am=", a.stride(0))
     print("stride_ak=", a.stride(1))
     print("stride_bk=", b.stride(0))
@@ -236,8 +237,12 @@ def test_gemm(
         print(pgm.asm["ttgir"], file=a)
     with open("matmul.llir", "w") as a:
         print(pgm.asm["llir"], file=a)
-    torch.set_printoptions(profile="full")
-    golden = torch.nn.functional.normalize(golden)
-    z = torch.nn.functional.normalize(z)
+
+    #    torch.set_printoptions(profile="full")
+    # golden = torch.nn.functional.normalize(golden)
+    # z = torch.nn.functional.normalize(z)
+    # z /= 2
+    print("Ref:\n", golden)
+    print("z:\n", z)
 
     assert_close(z, golden, rtol=1e-2, atol=1e-3, check_dtype=False)

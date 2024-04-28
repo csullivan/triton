@@ -20,14 +20,14 @@ matmul_kernel = raw_module.get_function("matmul_kernel")
 # Define the dimensions of the matrices
 M, N, K = 128, 256, 64
 
-BLOCK_M = 64
+BLOCK_M = 16
 BLOCK_N = 16
 BLOCK_K = 32
 
 # Create random matrices A and B and an output matrix C
 
-A = torch.full((M, K), 1.0, dtype=torch.float8_e5m2, device="cuda")
-B = torch.full((K, N), 1.0, dtype=torch.float8_e5m2, device="cuda")
+A = torch.full((M, K), 1.0, dtype=torch.float8_e4m3fn, device="cuda")
+B = torch.full((K, N), 1.0, dtype=torch.float8_e4m3fn, device="cuda")
 C = torch.full((M, N), 0.0, dtype=torch.float32, device="cuda")
 A_f32 = A.to(torch.float32)
 B_f32 = B.to(torch.float32)
@@ -42,10 +42,8 @@ stride_zm, stride_zn = C.stride()
 # Set grid and block sizes for the kernel launch
 block = (128, 1, 1)
 blocks_per_grid_x = int(ceildiv(M, BLOCK_M) * ceildiv(N, BLOCK_N))
-# grid = (blocks_per_grid_x, 1, 1)
-grid = (32, 1, 1)
-
-shared_memory_size = 32 * 1024
+grid = (blocks_per_grid_x, 1, 1)
+shared_memory_size = 3200
 
 
 # Launch the kernel
