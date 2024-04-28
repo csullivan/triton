@@ -142,6 +142,7 @@ def make_launcher(constants, signature, ids):
 
     # generate glue code
     params = [i for i in signature.keys() if i not in constants]
+    print(params)
     src = f"""
 #include \"cuda.h\"
 #include <stdbool.h>
@@ -192,6 +193,7 @@ static void _launch(int gridX, int gridY, int gridZ, int num_warps, int num_ctas
   void *params[] = {{ {', '.join(f"&arg{i}" for i in params)} }};
   if (gridX*gridY*gridZ > 0) {{
     if (num_ctas == 1) {{
+      printf(\"launch params: %d, %d, %d, %d, %d \\n\", gridX, gridY, gridZ, num_warps, shared_memory);
       CUDA_CHECK(cuLaunchKernel(function, gridX, gridY, gridZ, 32*num_warps, 1, 1, shared_memory, stream, params, 0));
     }} else {{
       CUlaunchAttribute launchAttr[2];
