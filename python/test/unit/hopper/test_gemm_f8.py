@@ -117,7 +117,7 @@ def matmul_kernel(
             num_stages,
         )
         for shape_w_c in [
-            [16, 16, 32, 4, 1, 128, 256, 64],
+            [16, 32, 32, 4, 1, 16, 4096, 4096],
         ]
         for out_dtype in ["float32"]
         for trans_a in [False]
@@ -127,9 +127,7 @@ def matmul_kernel(
         for num_stages in [3]
     ],
 )
-@pytest.mark.skipif(
-    torch.cuda.get_device_capability()[0] < 9, reason="Requires compute capability >= 9"
-)
+@pytest.mark.skipif(torch.cuda.get_device_capability()[0] < 9, reason="Requires compute capability >= 9")
 def test_gemm(
     BLOCK_M,
     BLOCK_N,
