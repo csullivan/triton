@@ -275,7 +275,7 @@ def initialize_block_scaled(M, N, K, block_scale_type="nvfp4", compute_reference
         "BLOCK_SIZE_M": BLOCK_M,
         "BLOCK_SIZE_N": BLOCK_N,
         "BLOCK_SIZE_K": BLOCK_K,
-        "num_stages": 4,
+        "num_stages": 1,
         "ELEM_PER_BYTE": ELEM_PER_BYTE,
         "VEC_SIZE": VEC_SIZE,
     }
