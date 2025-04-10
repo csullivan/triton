@@ -29,10 +29,11 @@ def _query_gpu_specs():
     if is_hip_cdna4():
         # no spec data yet.
         return None
-    import subprocess
-    cmd = ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader", "-i=0"]
-    output = subprocess.check_output(cmd, stderr=subprocess.DEVNULL).decode().strip()
-    name = output.splitlines()[0]
+    elif name is None:
+        import subprocess
+        cmd = ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader", "-i=0"]
+        output = subprocess.check_output(cmd, stderr=subprocess.DEVNULL).decode().strip()
+        name = output.splitlines()[0]
     return {
         "NVIDIA H100 80GB HBM3": {"MAX_TFLOPS8": 1979, "MAX_TFLOPS16": 989, "MAX_TBPS": 3.35}, "HGX GB200":
         {"MAX_TFLOPS8": 4500, "MAX_TFLOPS16": 2250, "MAX_TBPS": 8.0}, "NVIDIA B200":
@@ -40,7 +41,7 @@ def _query_gpu_specs():
     }[name]
 
 
-SPECS = _query_gpu_specs()
+SPECS = None
 
 
 def quantize(w, dtype, dev, **opt):
@@ -174,7 +175,11 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=8192, help="batch size for dense (default: 8192)")
     parser.add_argument("--dim1", type=int, default=8192, help="dim1 for dense (default: 8192)")
     parser.add_argument("--dim2", type=int, default=8192, help="dim2 for dense (default: 8192)")
+    parser.add_argument("--gpu", type=str, choices=["NVIDIA H100 80GB HBM3", "HGX GB200", "NVIDIA B200"],
+                      help="Override the GPU type for benchmarking", default="NVIDIA B200")
     args = parser.parse_args()
+
+    SPECS = _query_gpu_specs(args.gpu)
 
     # Patch meta.num_sms to use a specified number of SMs
     original_num_sms = None
