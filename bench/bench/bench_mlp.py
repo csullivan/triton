@@ -168,7 +168,7 @@ if __name__ == "__main__":
     parser.add_argument("--only_second_matmul", action="store_true", help="Run only the second matmul (for profiling)")
     parser.add_argument("--dense", action="store_true", help="Run dense model variant")
     parser.add_argument("--llama4", action="store_true", help="Run llama4 model variant")
-    parser.add_argument("--fp8", action="store_true", help="Use FP8 precision")
+    parser.add_argument("--fp8xfp8", action="store_true", help="Use FP8 precision")
     parser.add_argument("--fp8xmxfp4", action="store_true", help="Use FP8 for inputs and MXFP4 for weights")
     args = parser.parse_args()
 
@@ -176,7 +176,7 @@ if __name__ == "__main__":
     qxdtype = "fp8" if has_native_mx4 else "bf16"
 
     if args.dense:
-        if args.fp8:
+        if args.fp8xfp8:
             print(bench_mlp(8192, 8192, 8192, 1, 1, "fp8", "fp8", TP=1, EP=1, name="dense",
                          disable_proton=args.no_proton, num_iterations=args.num_iterations,
                          only_first_matmul=args.only_first_matmul, only_second_matmul=args.only_second_matmul))
@@ -185,7 +185,7 @@ if __name__ == "__main__":
                          disable_proton=args.no_proton, num_iterations=args.num_iterations,
                          only_first_matmul=args.only_first_matmul, only_second_matmul=args.only_second_matmul))
     if args.llama4:
-        if args.fp8:
+        if args.fp8xfp8:
             print(bench_mlp(1024, 5120, 8192, 128, 4, "fp8", "fp8", TP=4, EP=2, name="llama4",
                          disable_proton=args.no_proton, num_iterations=args.num_iterations,
                          only_first_matmul=args.only_first_matmul, only_second_matmul=args.only_second_matmul))
