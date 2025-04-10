@@ -487,6 +487,7 @@ def matmul_ogs(x, w, bias,
             f"invalid expt_data, {expt_data.buffer.shape}, {n_expts_tot=}, {grid_m=}"
     # matrix multiplication
     n_cta = batch_size * grid_m * grid_n * opt_flags.split_k
+    print(f"num_tiles: {n_cta}")
     n_cta = min(meta.num_sms(), n_cta) if opt_flags.is_persistent else n_cta
     flex = precision_config.flex_ctx
     bias_stride = None if bias is None else bias.stride(0)

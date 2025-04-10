@@ -9,7 +9,7 @@ from triton_bench.mxfp import downcast_to_mxfp
 from triton_bench.matmul_ogs import MicroscalingCtx, matmul_ogs, PrecisionConfig, FlexCtx
 from triton_bench.numerics import InFlexData
 from triton_bench.routing import routing_torch, simulate_expert_sharded_routing
-from triton_bench.meta import cuda_capability_geq
+from triton_bench.meta import cuda_capability_geq, num_sms
 
 
 def is_hip_cdna4():
@@ -170,27 +170,43 @@ if __name__ == "__main__":
     parser.add_argument("--llama4", action="store_true", help="Run llama4 model variant")
     parser.add_argument("--fp8xfp8", action="store_true", help="Use FP8 precision")
     parser.add_argument("--fp8xmxfp4", action="store_true", help="Use FP8 for inputs and MXFP4 for weights")
+    parser.add_argument("--num_sms", type=int, help="Override the number of SMs for benchmarking")
+    parser.add_argument("--batch_size", type=int, default=8192, help="batch size for dense (default: 8192)")
+    parser.add_argument("--dim1", type=int, default=8192, help="dim1 for dense (default: 8192)")
+    parser.add_argument("--dim2", type=int, default=8192, help="dim2 for dense (default: 8192)")
     args = parser.parse_args()
 
-    has_native_mx4 = torch.cuda.get_device_capability(0)[0] >= 10
-    qxdtype = "fp8" if has_native_mx4 else "bf16"
+    # Patch meta.num_sms to use a specified number of SMs
+    original_num_sms = None
+    if args.num_sms is not None:
+        original_num_sms = triton_bench.meta.num_sms
+        def patched_num_sms():
+            return args.num_sms
+        triton_bench.meta.num_sms = patched_num_sms
 
-    if args.dense:
-        if args.fp8xfp8:
-            print(bench_mlp(8192, 8192, 8192, 1, 1, "fp8", "fp8", TP=1, EP=1, name="dense",
-                         disable_proton=args.no_proton, num_iterations=args.num_iterations,
-                         only_first_matmul=args.only_first_matmul, only_second_matmul=args.only_second_matmul))
-        if args.fp8xmxfp4:
-            print(bench_mlp(8192, 8192, 8192, 1, 1, qxdtype, "mx4", TP=1, EP=1, name="dense",
-                         disable_proton=args.no_proton, num_iterations=args.num_iterations,
-                         only_first_matmul=args.only_first_matmul, only_second_matmul=args.only_second_matmul))
-    if args.llama4:
-        if args.fp8xfp8:
-            print(bench_mlp(1024, 5120, 8192, 128, 4, "fp8", "fp8", TP=4, EP=2, name="llama4",
-                         disable_proton=args.no_proton, num_iterations=args.num_iterations,
-                         only_first_matmul=args.only_first_matmul, only_second_matmul=args.only_second_matmul))
-        if args.fp8xmxfp4:
-            print(bench_mlp(1024, 5120, 8192, 128, 4, qxdtype, "mx4", TP=4, EP=2, name="llama4",
-                         disable_proton=args.no_proton, num_iterations=args.num_iterations,
-                         only_first_matmul=args.only_first_matmul, only_second_matmul=args.only_second_matmul))
+    try:
+        has_native_mx4 = torch.cuda.get_device_capability(0)[0] >= 10
+        qxdtype = "fp8" if has_native_mx4 else "bf16"
+
+        if args.dense:
+            if args.fp8xfp8:
+                print(bench_mlp(args.batch_size, args.dim1, args.dim2, 1, 1, "fp8", "fp8", TP=1, EP=1, name="dense",
+                              disable_proton=args.no_proton, num_iterations=args.num_iterations,
+                              only_first_matmul=args.only_first_matmul, only_second_matmul=args.only_second_matmul))
+            if args.fp8xmxfp4:
+                print(bench_mlp(args.batch_size, args.dim1, args.dim2, 1, 1, qxdtype, "mx4", TP=1, EP=1, name="dense",
+                              disable_proton=args.no_proton, num_iterations=args.num_iterations,
+                              only_first_matmul=args.only_first_matmul, only_second_matmul=args.only_second_matmul))
+        if args.llama4:
+            if args.fp8xfp8:
+                print(bench_mlp(1024, 5120, 8192, 128, 4, "fp8", "fp8", TP=4, EP=2, name="llama4",
+                              disable_proton=args.no_proton, num_iterations=args.num_iterations,
+                              only_first_matmul=args.only_first_matmul, only_second_matmul=args.only_second_matmul))
+            if args.fp8xmxfp4:
+                print(bench_mlp(1024, 5120, 8192, 128, 4, qxdtype, "mx4", TP=4, EP=2, name="llama4",
+                              disable_proton=args.no_proton, num_iterations=args.num_iterations,
+                              only_first_matmul=args.only_first_matmul, only_second_matmul=args.only_second_matmul))
+    finally:
+        if original_num_sms is not None:
+            triton_bench.meta.num_sms = original_num_sms
 
