@@ -1,0 +1,79 @@
+$ /home/scratch.svc_compute_arch/release/nsightSystems/x86_64/rel/latest/bin/nsys profile --stats=true python -m bench.bench_mlp --nsys
+Collecting data...
+(0, 0, 0)
+Generating '/tmp/nsys-report-24d0.qdstrm'
+[1/8] [========================100%] report2.nsys-rep
+[2/8] [========================100%] report2.sqlite
+[3/8] Executing 'nvtx_sum' stats report
+SKIPPED: /home/scratch.chrsullivan_gpu/projects/triton-private-blackwell-2/bench/report2.sqlite does not contain NV Tools Extension (NVTX) data.
+[4/8] Executing 'osrt_sum' stats report
+
+ Time (%)  Total Time (ns)  Num Calls   Avg (ns)    Med (ns)   Min (ns)   Max (ns)   StdDev (ns)           Name
+ --------  ---------------  ---------  ----------  ----------  --------  ----------  -----------  ----------------------
+     58.1      13783404222        591  23322173.0  10088023.0      1179  2491427227  105091599.9  poll
+     27.4       6499224553        942   6899389.1     43175.5      1017  2471970804  109990085.6  ioctl
+      5.8       1376199341       1296   1061882.2      3720.0      1001  1218427442   33878074.8  read
+      5.1       1208893995        239   5058133.9      1411.0      1007  1206166160   78019737.1  close
+      3.5        820584112       1199    684390.4    584508.0      1232     1991446     334719.9  open64
+      0.0         10136624          2   5068312.0   5068312.0   5062179     5074445       8673.4  nanosleep
+      0.0          9948812         13    765293.2      5195.0      2065     9892774    2742467.4  pipe2
+      0.0          5247631         92     57039.5     10258.0      4383     2166617     287922.9  mmap64
+      0.0          3038824         14    217058.9    168847.0    154721      372260      77759.0  sem_timedwait
+      0.0          2330160          3    776720.0    771088.0    764993      794079      15339.1  pthread_create
+      0.0          2013123        233      8640.0      8127.0      4761       29412       2703.6  fgets
+      0.0          1569138         25     62765.5     63279.0     57767       64014       1605.0  sleep
+      0.0           646228          2    323114.0    323114.0    242536      403692     113954.5  pthread_cond_wait
+      0.0           441674          4    110418.5     78071.5     48220      237311      86518.8  waitpid
+      0.0           361300         41      8812.2      4901.0      3011       62904      10017.7  mmap
+      0.0           234090         76      3080.1      1675.5      1008       17514       3540.4  fopen
+      0.0            55025         14      3930.4      1878.0      1246       17164       4700.0  write
+      0.0            34540         10      3454.0      3108.0      1038        6340       1780.1  open
+      0.0            32027          8      4003.4      4076.0      2412        5833       1142.6  munmap
+      0.0            27209         10      2720.9      2244.0      1362        5322       1444.1  fclose
+      0.0            15602          4      3900.5      3022.5      1536        8021       2901.0  fopen64
+      0.0            15127          4      3781.8      3880.0      1491        5876       1985.0  pthread_cond_signal
+      0.0            14183          2      7091.5      7091.5      6393        7790        987.8  socket
+      0.0             8257          1      8257.0      8257.0      8257        8257          0.0  connect
+      0.0             5630          2      2815.0      2815.0      2747        2883         96.2  pthread_cond_broadcast
+      0.0             3257          2      1628.5      1628.5      1344        1913        402.3  fwrite
+      0.0             3039          1      3039.0      3039.0      3039        3039          0.0  fflush
+      0.0             2213          2      1106.5      1106.5      1061        1152         64.3  fcntl
+      0.0             1960          1      1960.0      1960.0      1960        1960          0.0  bind
+
+[5/8] Executing 'cuda_api_sum' stats report
+
+ Time (%)  Total Time (ns)  Num Calls   Avg (ns)    Med (ns)   Min (ns)  Max (ns)  StdDev (ns)                        Name
+ --------  ---------------  ---------  ----------  ----------  --------  --------  -----------  ------------------------------------------------
+     45.6         54478322        211    258191.1      3445.0      2493  52139913    3590195.9  cudaLaunchKernel
+     36.5         43678217          1  43678217.0  43678217.0  43678217  43678217          0.0  cudaDeviceSynchronize
+     14.8         17643025          8   2205378.1    274710.0     83707  13656942    4681964.1  cudaMalloc
+      1.9          2249769          1   2249769.0   2249769.0   2249769   2249769          0.0  cudaGetDeviceProperties_v2_v12000
+      1.0          1183402        302      3918.5      3736.0      3003     16235       1275.3  cuLaunchKernel
+      0.1           177759          3     59253.0     54672.0     53199     69888       9239.6  cuModuleLoadData
+      0.1            97972        220       445.3       336.5       187      6353        583.8  cudaStreamIsCapturing_v10000
+      0.1            68029        419       162.4       114.0        60       704        100.8  cuGetProcAddress_v2
+      0.0             6575         18       365.3       290.5       260      1494        284.8  cudaOccupancyMaxActiveClusters_v11070
+      0.0             4935          1      4935.0      4935.0      4935      4935          0.0  cudaOccupancyAvailableDynamicSMemPerBlock_v10200
+      0.0             2057          2      1028.5      1028.5       995      1062         47.4  cuInit
+      0.0              995          2       497.5       497.5       293       702        289.2  cudaGetDriverEntryPoint_v11030
+      0.0              890          2       445.0       445.0       108       782        476.6  cuModuleGetLoadingMode
+
+[6/8] Executing 'cuda_gpu_kern_sum' stats report
+
+ Time (%)  Total Time (ns)  Instances  Avg (ns)  Med (ns)  Min (ns)  Max (ns)  StdDev (ns)                                                  Name
+ --------  ---------------  ---------  --------  --------  --------  --------  -----------  ----------------------------------------------------------------------------------------------------
+     80.8        114073475        200  570367.4  578958.5    396127    781694     172480.9  _matmul_ptma_NNT_fp8e4nvxfp8e4nvxmxfp4_128x256x128x1
+      9.2         13039764        106  123016.6  128128.0      2112    135103      24743.6  void at::native::<unnamed>::distribution_elementwise_grid_stride_kernel<float, (int)4, void at::nat…
+      5.1          7144166        100   71441.7   71392.0     70623     73184        540.9  _swiglu_fp8e4nvxfp8e4nv_8x128
+      4.3          6129482        100   61294.8   61280.0     60959     61984        189.5  void at::native::vectorized_elementwise_kernel<(int)4, at::native::float8_copy_kernel_cuda(at::Tens…
+      0.5           700893          2  350446.5  350446.5    235039    465854     163210.9  _downcast_to_mxfp
+      0.1            90399          3   30133.0   27904.0      2208     60287      29103.6  void at::native::vectorized_elementwise_kernel<(int)8, at::native::bfloat16_copy_kernel_cuda(at::Te…
+      0.0            14144          2    7072.0    7072.0      5568      8576       2127.0  void at::native::elementwise_kernel<(int)128, (int)4, void at::native::gpu_kernel_impl_nocast<at::n…
+
+[7/8] Executing 'cuda_gpu_mem_time_sum' stats report
+SKIPPED: /home/scratch.chrsullivan_gpu/projects/triton-private-blackwell-2/bench/report2.sqlite does not contain GPU memory data.
+[8/8] Executing 'cuda_gpu_mem_size_sum' stats report
+SKIPPED: /home/scratch.chrsullivan_gpu/projects/triton-private-blackwell-2/bench/report2.sqlite does not contain GPU memory data.
+Generated:
+        /home/scratch.chrsullivan_gpu/projects/triton-private-blackwell-2/bench/report2.nsys-rep
+        /home/scratch.chrsullivan_gpu/projects/triton-private-blackwell-2/bench/report2.sqlite
