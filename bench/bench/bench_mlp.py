@@ -177,6 +177,7 @@ if __name__ == "__main__":
     parser.add_argument("--dim2", type=int, default=8192, help="dim2 for dense (default: 8192)")
     parser.add_argument("--gpu", type=str, choices=["NVIDIA H100 80GB HBM3", "HGX GB200", "NVIDIA B200"],
                       help="Override the GPU type for benchmarking", default="NVIDIA B200")
+    parser.add_argument("--disable_persistent_tma", action="store_true", help="Force disable persistent TMA")
     args = parser.parse_args()
 
     SPECS = _query_gpu_specs(args.gpu)
@@ -188,6 +189,14 @@ if __name__ == "__main__":
         def patched_num_sms():
             return args.num_sms
         triton_bench.meta.num_sms = patched_num_sms
+
+    # Patch can_use_persistent_tma to respect disable flag
+    original_can_use_persistent_tma = None
+    if args.disable_persistent_tma:
+        original_can_use_persistent_tma = triton_bench.matmul_ogs.can_use_persistent_tma
+        def patched_can_use_persistent_tma(*args, **kwargs):
+            return False
+        triton_bench.matmul_ogs.can_use_persistent_tma = patched_can_use_persistent_tma
 
     try:
         has_native_mx4 = torch.cuda.get_device_capability(0)[0] >= 10
@@ -214,4 +223,6 @@ if __name__ == "__main__":
     finally:
         if original_num_sms is not None:
             triton_bench.meta.num_sms = original_num_sms
+        if original_can_use_persistent_tma is not None:
+            triton_bench.matmul_ogs.can_use_persistent_tma = original_can_use_persistent_tma
 
