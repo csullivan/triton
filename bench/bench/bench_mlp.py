@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import argparse
 import triton
 import triton.profiler as proton
 import torch
@@ -34,6 +35,7 @@ def _query_gpu_specs():
     name = output.splitlines()[0]
     return {
         "NVIDIA H100 80GB HBM3": {"MAX_TFLOPS8": 1979, "MAX_TFLOPS16": 989, "MAX_TBPS": 3.35}, "HGX GB200":
+        {"MAX_TFLOPS8": 4500, "MAX_TFLOPS16": 2250, "MAX_TBPS": 8.0}, "NVIDIA B200":
         {"MAX_TFLOPS8": 4500, "MAX_TFLOPS16": 2250, "MAX_TBPS": 8.0}
     }[name]
 
@@ -60,7 +62,7 @@ def quantize(w, dtype, dev, **opt):
 
 def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
               # tensor / expert parallelism
-              TP=1, EP=1, name=""):
+              TP=1, EP=1, name="", disable_proton=False):
     assert n_expts_tot % EP == 0
     assert dim2 % TP == 0
     dev = "cuda"
@@ -89,8 +91,9 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
     # -- benchmark --
     fpath = Path(f"logs/{name}/{batch}-{dim1}-{dim2}-{n_expts_tot}-{n_expts_act}-{x_dtype}-{w_dtype}.hatchet")
     fpath.parent.mkdir(parents=True, exist_ok=True)
-    proton.start(str(fpath.with_suffix('')), hook="triton")
-    proton.deactivate()
+    if not disable_proton:
+        proton.start(str(fpath.with_suffix('')), hook="triton")
+        proton.deactivate()
     # run layer
     x_dtype = {"bf16": torch.bfloat16, "fp8": torch.float8_e4m3fn}[x_dtype]
     for i in range(100):
@@ -106,7 +109,8 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
             x = x.to(x_dtype)
         else:
             rdata, gather_indx, scatter_indx = None, None, None
-        proton.activate()
+        if not disable_proton:
+            proton.activate()
         # c0 = torch.empty((x.shape[0], w1.shape[-1]), device=dev, dtype=x.dtype)
         # c1 = torch.empty((x.shape[0], w2.shape[-1]), device=dev, dtype=x.dtype)
         # cublas.matmul(x, w1.squeeze(0), c0)
@@ -114,8 +118,10 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
         x = matmul_ogs(x, w1, b1, rdata, gather_indx=gather_indx, precision_config=pc1)
         x = triton_bench.swiglu.swiglu(x, 1.0, pcs)
         x = matmul_ogs(x, w2, b2, rdata, scatter_indx=scatter_indx, precision_config=pc2)
-        proton.deactivate()
-    proton.finalize()
+        if not disable_proton:
+            proton.deactivate()
+    if not disable_proton:
+        proton.finalize()
 
     # -- analyze --
     with open(f"{fpath}") as fd:
@@ -142,9 +148,13 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
 
 
 if __name__ == "__main__":
-    has_native_mx4 = torch.cuda.get_device_capability(0)[0] >= 10 or is_hip_cdna4()
+    parser = argparse.ArgumentParser(description="Benchmark MLP operations")
+    parser.add_argument("--nsys", action="store_true", help="Disable proton profiling (for use with nsys)")
+    args = parser.parse_args()
+
+    has_native_mx4 = torch.cuda.get_device_capability(0)[0] >= 10
     qxdtype = "fp8" if has_native_mx4 else "bf16"
-    print(bench_mlp(8192, 8192, 8192, 1, 1, "fp8", "fp8", TP=1, EP=1, name="dense"))
-    print(bench_mlp(8192, 8192, 8192, 1, 1, qxdtype, "mx4", TP=1, EP=1, name="dense"))
-    print(bench_mlp(1024, 5120, 8192, 128, 4, "fp8", "fp8", TP=4, EP=2, name="llama4"))
-    print(bench_mlp(1024, 5120, 8192, 128, 4, qxdtype, "mx4", TP=4, EP=2, name="llama4"))
+    # print(bench_mlp(8192, 8192, 8192, 1, 1, "fp8", "fp8", TP=1, EP=1, name="dense", disable_proton=args.nsys))
+    print(bench_mlp(8192, 8192, 8192, 1, 1, qxdtype, "mx4", TP=1, EP=1, name="dense", disable_proton=args.nsys))
+    # print(bench_mlp(1024, 5120, 8192, 128, 4, "fp8", "fp8", TP=4, EP=2, name="llama4", disable_proton=args.nsys))
+    # print(bench_mlp(1024, 5120, 8192, 128, 4, qxdtype, "mx4", TP=4, EP=2, name="llama4", disable_proton=args.nsys))
