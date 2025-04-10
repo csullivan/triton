@@ -62,9 +62,12 @@ def quantize(w, dtype, dev, **opt):
 
 def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
               # tensor / expert parallelism
-              TP=1, EP=1, name="", disable_proton=False):
+              TP=1, EP=1, name="", disable_proton=False, num_iterations=100,
+              only_first_matmul=False, only_second_matmul=False):
     assert n_expts_tot % EP == 0
     assert dim2 % TP == 0
+    assert not (only_first_matmul and only_second_matmul), "Cannot run only first and only second matmul at the same time"
+
     dev = "cuda"
     # input
     # weights
@@ -96,7 +99,7 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
         proton.deactivate()
     # run layer
     x_dtype = {"bf16": torch.bfloat16, "fp8": torch.float8_e4m3fn}[x_dtype]
-    for i in range(100):
+    for i in range(num_iterations):
         x = torch.randn((batch, dim1), device=dev)
         x = x.to(wg.dtype if n_expts_tot > 1 else x_dtype)
         # TODO: activate proton here when fast routing is done
@@ -109,15 +112,25 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
             x = x.to(x_dtype)
         else:
             rdata, gather_indx, scatter_indx = None, None, None
+
         if not disable_proton:
             proton.activate()
         # c0 = torch.empty((x.shape[0], w1.shape[-1]), device=dev, dtype=x.dtype)
         # c1 = torch.empty((x.shape[0], w2.shape[-1]), device=dev, dtype=x.dtype)
         # cublas.matmul(x, w1.squeeze(0), c0)
         # cublas.matmul(c0, w2.squeeze(0), c1)
-        x = matmul_ogs(x, w1, b1, rdata, gather_indx=gather_indx, precision_config=pc1)
-        x = triton_bench.swiglu.swiglu(x, 1.0, pcs)
-        x = matmul_ogs(x, w2, b2, rdata, scatter_indx=scatter_indx, precision_config=pc2)
+
+        if only_second_matmul:
+            synthetic_x = torch.randn((batch, w2.shape[-2]), device=dev)
+            synthetic_x = synthetic_x.to(wg.dtype if n_expts_tot > 1 else x_dtype)
+            x = matmul_ogs(synthetic_x, w2, b2, rdata, scatter_indx=scatter_indx, precision_config=pc2)
+        elif only_first_matmul:
+            x = matmul_ogs(x, w1, b1, rdata, gather_indx=gather_indx, precision_config=pc1)
+        else:
+            x = matmul_ogs(x, w1, b1, rdata, gather_indx=gather_indx, precision_config=pc1)
+            x = triton_bench.swiglu.swiglu(x, 1.0, pcs)
+            x = matmul_ogs(x, w2, b2, rdata, scatter_indx=scatter_indx, precision_config=pc2)
+
         if not disable_proton:
             proton.deactivate()
     if not disable_proton:
@@ -149,12 +162,35 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Benchmark MLP operations")
-    parser.add_argument("--nsys", action="store_true", help="Disable proton profiling (for use with nsys)")
+    parser.add_argument("--no_proton", action="store_true", help="Disable proton profiling")
+    parser.add_argument("--num_iterations", type=int, default=100, help="Number of iterations to run")
+    parser.add_argument("--only_first_matmul", action="store_true", help="Run only the first matmul (for profiling)")
+    parser.add_argument("--only_second_matmul", action="store_true", help="Run only the second matmul (for profiling)")
+    parser.add_argument("--dense", action="store_true", help="Run dense model variant")
+    parser.add_argument("--llama4", action="store_true", help="Run llama4 model variant")
+    parser.add_argument("--fp8", action="store_true", help="Use FP8 precision")
+    parser.add_argument("--fp8xmxfp4", action="store_true", help="Use FP8 for inputs and MXFP4 for weights")
     args = parser.parse_args()
 
     has_native_mx4 = torch.cuda.get_device_capability(0)[0] >= 10
     qxdtype = "fp8" if has_native_mx4 else "bf16"
-    # print(bench_mlp(8192, 8192, 8192, 1, 1, "fp8", "fp8", TP=1, EP=1, name="dense", disable_proton=args.nsys))
-    print(bench_mlp(8192, 8192, 8192, 1, 1, qxdtype, "mx4", TP=1, EP=1, name="dense", disable_proton=args.nsys))
-    # print(bench_mlp(1024, 5120, 8192, 128, 4, "fp8", "fp8", TP=4, EP=2, name="llama4", disable_proton=args.nsys))
-    # print(bench_mlp(1024, 5120, 8192, 128, 4, qxdtype, "mx4", TP=4, EP=2, name="llama4", disable_proton=args.nsys))
+
+    if args.dense:
+        if args.fp8:
+            print(bench_mlp(8192, 8192, 8192, 1, 1, "fp8", "fp8", TP=1, EP=1, name="dense",
+                         disable_proton=args.no_proton, num_iterations=args.num_iterations,
+                         only_first_matmul=args.only_first_matmul, only_second_matmul=args.only_second_matmul))
+        if args.fp8xmxfp4:
+            print(bench_mlp(8192, 8192, 8192, 1, 1, qxdtype, "mx4", TP=1, EP=1, name="dense",
+                         disable_proton=args.no_proton, num_iterations=args.num_iterations,
+                         only_first_matmul=args.only_first_matmul, only_second_matmul=args.only_second_matmul))
+    if args.llama4:
+        if args.fp8:
+            print(bench_mlp(1024, 5120, 8192, 128, 4, "fp8", "fp8", TP=4, EP=2, name="llama4",
+                         disable_proton=args.no_proton, num_iterations=args.num_iterations,
+                         only_first_matmul=args.only_first_matmul, only_second_matmul=args.only_second_matmul))
+        if args.fp8xmxfp4:
+            print(bench_mlp(1024, 5120, 8192, 128, 4, qxdtype, "mx4", TP=4, EP=2, name="llama4",
+                         disable_proton=args.no_proton, num_iterations=args.num_iterations,
+                         only_first_matmul=args.only_first_matmul, only_second_matmul=args.only_second_matmul))
+
