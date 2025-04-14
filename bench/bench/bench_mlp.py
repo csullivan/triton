@@ -137,6 +137,8 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
     if not disable_proton:
         proton.finalize()
 
+    if disable_proton:
+        return 0, 0, 0
     # -- analyze --
     with open(f"{fpath}") as fd:
         data = json.load(fd)
