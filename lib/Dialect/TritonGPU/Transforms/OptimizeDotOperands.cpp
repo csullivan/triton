@@ -179,45 +179,78 @@ private:
       return failure();
     }
 
-    // Look for a sequence
-    //    local_load
-    // -> reshape(..., (BLOCK_MN / 128, BLOCK_K / scale_vec_size / 4, 32, 4,
-    // 4)
-    // -> transpose(..., (0, 3, 2, 1, 4))
-    // -> reshape(..., (BLOCK_MN, BLOCK_K / scale_vec_size)
-    // -> tmem_alloc
-    // -> tc_gen_mma_scaled
-    // and replace it with local_alloc -> tc_gen_mma_scaled
-    auto scale2DShape = dstType.getShape();
-    auto blockMN = scale2DShape[0];
-    auto numScales = scale2DShape[1];
-    const SmallVector<int> transposeOrder{0, 3, 2, 1, 4};
-    const SmallVector<int64_t> reshape5DShape{blockMN / 128, numScales / 4, 32,
-                                              4, 4};
-
     auto reshapeOp2D = getNextOp<triton::ReshapeOp>(tmemAlloc.getSrc());
-    if (!reshapeOp2D ||
-        reshapeOp2D.getResult().getType().getShape() != scale2DShape) {
+    if (!reshapeOp2D) {
+      llvm::errs() << "No final reshape op found\n";
       return failure();
     }
 
     auto transOp = getNextOp<triton::TransOp>(reshapeOp2D.getSrc());
-    if (!transOp || transOp.getOrder() != ArrayRef<int>(transposeOrder)) {
+    if (!transOp) {
+      llvm::errs() << "No trans op found\n";
       return failure();
     }
 
     auto reshapeOp5D = getNextOp<triton::ReshapeOp>(transOp.getSrc());
-    if (!reshapeOp5D || reshapeOp5D.getResult().getType().getShape() !=
-                            ArrayRef<int64_t>(reshape5DShape)) {
+    if (!reshapeOp5D) {
+      llvm::errs() << "No initial reshape op found\n";
       return failure();
     }
 
-    auto localLoad = getNextOp<triton::gpu::LocalLoadOp>(reshapeOp5D.getSrc());
-    if (!localLoad || !isTmemCopyCompatible(localLoad.getSrc().getType())) {
-      return failure();
+    auto descriptorLoad = getNextOp<triton::DescriptorLoadOp>(reshapeOp5D.getSrc());
+    if (descriptorLoad) {
+      auto resultType = descriptorLoad.getResult().getType();
+      auto resultShape = resultType.getShape();
+      auto resultElemType = resultType.getElementType();
+      auto ctx = getContext();
+
+      auto rank = resultShape.size();
+      SmallVector<unsigned> order(rank);
+      for (int i = 0; i < rank; ++i) {
+        order[i] = rank - 1 - i;
+      }
+      auto ctaLayout = triton::gpu::getCTALayout(resultType.getEncoding());
+      if (!ctaLayout)
+        return failure();
+
+      auto sharedEnc = triton::gpu::SwizzledSharedEncodingAttr::get(
+          ctx, /*vec=*/1, /*perPhase=*/1, /*maxPhase=*/1,
+          order, ctaLayout);
+
+      auto sharedMemorySpace = SharedMemorySpaceAttr::get(ctx);
+      auto allocTy = MemDescType::get(resultShape, resultElemType,
+                                      sharedEnc, sharedMemorySpace);
+
+      rewriter.setInsertionPointAfter(descriptorLoad);
+      auto localAlloc = rewriter.create<LocalAllocOp>(
+          descriptorLoad.getLoc(), allocTy, descriptorLoad);
+
+      opOperand.assign(localAlloc);
+      return success();
     }
-    opOperand.assign(localLoad.getSrc());
-    return success();
+
+    auto localLoad = getNextOp<triton::gpu::LocalLoadOp>(reshapeOp5D.getSrc());
+    if (localLoad) {
+      auto scale2DShape = dstType.getShape();
+      auto blockMN = scale2DShape[0];
+      auto numScales = scale2DShape[1];
+      const SmallVector<int> transposeOrder{0, 3, 2, 1, 4};
+      const SmallVector<int64_t> reshape5DShape{blockMN / 128, numScales / 4, 32, 4, 4};
+
+      if (reshapeOp2D.getResult().getType().getShape() != scale2DShape ||
+          transOp.getOrder() != ArrayRef<int>(transposeOrder) ||
+          reshapeOp5D.getResult().getType().getShape() != ArrayRef<int64_t>(reshape5DShape) ||
+          !isTmemCopyCompatible(localLoad.getSrc().getType())) {
+        llvm::errs() << "Local load pattern requirements not met\n";
+        return failure();
+      }
+
+      opOperand.assign(localLoad.getSrc());
+      return success();
+    }
+
+    llvm::errs() << "No supported source operation found\n";
+    return failure();
   }
 
   template <typename Op> Op getNextOp(Value op) const {
