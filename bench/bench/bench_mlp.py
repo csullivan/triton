@@ -25,7 +25,7 @@ else:
     cublas = None
 
 
-def _query_gpu_specs():
+def _query_gpu_specs(name: str = None):
     if is_hip_cdna4():
         # no spec data yet.
         return None
