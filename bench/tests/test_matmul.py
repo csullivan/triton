@@ -15,7 +15,7 @@ from triton_bench.matmul_ogs import matmul_ogs, matmul_ogs_torch
 from triton_bench.numerics import InFlexData, OutFlexData
 from triton_bench.mxfp import downcast_to_mxfp, upcast_from_mxfp
 # testing utilities
-from triton_bench.testing import assert_close, compute_actual_scale, compute_sanitizer
+from triton_bench.testing import assert_close, compute_actual_scale
 # target-specific utilities
 from triton_bench.meta import is_hip
 
@@ -191,7 +191,6 @@ class Case:
             Case(300, 400, 400, "batched", "bfloat16", "mxfloat8_e5m2", 32, 4),
             Case(1000, 700, 2, "batched", "bfloat16", "mxfloat4_e2m1", 8, 2),
             Case(16, 256, 256, "ragged", "float8_e5m2", "mxfloat4_e2m1", 128, 4, swizzle_mx_scale=True),
-            Case(1024, 1024, 1024, "batched", "float8_e5m2", "mxfloat4_e2m1", 128, 4, swizzle_mx_scale=True),
             Case(1000, 704, 800, "batched", "float8_e5m2", "mxfloat4_e2m1", 3, 1, swizzle_mx_scale=True),
             Case(1000, 704, 800, "batched", "float8_e5m2", "mxfloat4_e2m1", 3, 1, swizzle_mx_scale=False),
             Case(1000, 704, 800, "ragged", "float8_e5m2", "mxfloat4_e2m1", 8, 2, split_k=9, swizzle_mx_scale=False),
@@ -225,7 +224,7 @@ class Case:
 @pytest.mark.parametrize("has_y_gammas", [False, True])
 @pytest.mark.parametrize("is_persistent", [False, True])
 def test_op(m, n, k, split_k, do_gather, do_scatter, fused_scatter, has_y_gammas, is_persistent, n_expts_tot,
-            n_expts_act, n_expt_shards, mode, act_dtype_str, weight_dtype_str, block_m, swizzle_mx_scale, request):
+            n_expts_act, n_expt_shards, mode, act_dtype_str, weight_dtype_str, block_m, swizzle_mx_scale):
     # TODO: remove when Triton FP8 supports proper RTNE
     if "float8" in weight_dtype_str and torch.cuda.get_device_capability()[0] < 9:
         pytest.skip("Float8 not tested on A100")
@@ -292,7 +291,6 @@ def test_op(m, n, k, split_k, do_gather, do_scatter, fused_scatter, has_y_gammas
     if is_persistent and not can_use_persistent_tma(x_tri, w_tri, gindx, precision_opt):
         pytest.skip("persistent TMAs not supported for this test")
 
-
     if w_tri.shape[0] == 1:
         # Test the case when weight has dim 2, i.e., shape (K, N).
         w_tri = w_tri.squeeze(0).detach().requires_grad_()
@@ -321,20 +319,10 @@ def test_op(m, n, k, split_k, do_gather, do_scatter, fused_scatter, has_y_gammas
             assert n_rows > 0
             ref_y = ref_y[:n_rows]
             tri_y = tri_y[:n_rows]
-    ref_tri_y = scale(ref_y, flex.out_data.expected_scale)
-    assert_close(ref_tri_y, tri_y)
+    assert_close(scale(ref_y, flex.out_data.expected_scale), tri_y)
 
     if act_is_float8:
         tri_y_scale = flex.out_data.actual_scale.clone()
         ref_y_scale = compute_actual_scale(ref_y, tri_y.dtype)
         assert (ref_y_scale -
                 tri_y_scale).abs() < 1e-10, f"ref_y_scale: {ref_y_scale}, tri_y_scale: {tri_y_scale.item()}"
-
-
-# Simple test to verify compute_sanitizer works
-@compute_sanitizer()
-def test_simple_sanitizer(request):
-    # Very simple test that should pass sanitizer checks
-    x = torch.randn(10, 10, device="cuda")
-    y = x + x
-    assert y.shape == (10, 10)

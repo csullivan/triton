@@ -487,85 +487,11 @@ def matmul_ogs(x, w, bias,
             f"invalid expt_data, {expt_data.buffer.shape}, {n_expts_tot=}, {grid_m=}"
     # matrix multiplication
     n_cta = batch_size * grid_m * grid_n * opt_flags.split_k
+    print(f"num_tiles: {n_cta}")
     n_cta = min(meta.num_sms(), n_cta) if opt_flags.is_persistent else n_cta
-
-    #manual tuning
-    # opt_flags.num_warps = 4
-    # opt_flags.block_n = 128
-    # opt_flags.num_stages = 3
-    # opt_flags.block_k = 256
-    print(f"num_warps: {opt_flags.num_warps}, block_n: {opt_flags.block_n}, num_stages: {opt_flags.num_stages}, block_k: {opt_flags.block_k}")
-
     flex = precision_config.flex_ctx
     bias_stride = None if bias is None else bias.stride(0)
     num_indx = None if scatter_indx is None else scatter_indx.src_indx.shape[0]
-
-    # Create a dictionary of all kernel parameters
-    # kernel_params = {
-    #     "output": memory["output"],
-    #     "out0": out0,
-    #     "out0_stride": out0.stride(),
-    #     "out0_flex": out0_flex,
-    #     "x": x,
-    #     "x_stride": (x.stride(0), x.stride(1), x.stride(2)),
-    #     "lhs_scale": flex.lhs_data.scale,
-    #     "w": w,
-    #     "w_stride": (w.stride(0), w.stride(1), w.stride(2)),
-    #     "w_transpose": w.stride(2) != 1,
-    #     "rhs_scale": flex.rhs_data.scale,
-    #     "weight_scale": mx_ctx.weight_scale,
-    #     "mx_scale_stride": (mx_scale_stride_e, mx_scale_stride_k, mx_scale_stride_n),
-    #     "mx_transpose": mx_scale_stride_n != 1,
-    #     "bias": bias,
-    #     "bias_stride": bias_stride,
-    #     "M": x.shape[1],
-    #     "M_no_hist": x.shape[1] if routing_data.expt_hist is None else None,
-    #     "N": N,
-    #     "K": K,
-    #     "betas": betas,
-    #     "gammas": gammas,
-    #     "gather_indx": None if gather_indx is None else gather_indx.src_indx,
-    #     "scatter_indx": None if scatter_indx is None else scatter_indx.src_indx,
-    #     "num_indx": num_indx,
-    #     "writeback_idxs": writeback_idxs,
-    #     "writeback_size": writeback_size,
-    #     "hist": expt_data.hist,
-    #     "offs": expt_data.offs,
-    #     "offs_sum": expt_data.offs_sum,
-    #     "blocks": expt_data.blocks,
-    #     "batch_size": batch_size,
-    #     "grid_m": grid_m,
-    #     "grid_n": grid_n,
-    #     "out_alpha": out_alpha,
-    #     "n_expts_tot": routing_data.n_expts_tot,
-    #     "n_expts_act": routing_data.n_expts_act,
-    #     "max_num_imprecise_acc": precision_config.max_num_imprecise_acc,
-    #     "allow_tf32": precision_config.allow_tf32,
-    #     "flexpoint_saturate_inf": precision_config.flexpoint_saturate_inf,
-    #     "rhs_is_per_batch": flex.rhs_data.is_per_batch,
-    #     "block_m": opt_flags.block_m,
-    #     "block_n": opt_flags.block_n,
-    #     "block_k": opt_flags.block_k,
-    #     "group_m": opt_flags.group_m,
-    #     "xcd_swizzle": opt_flags.xcd_swizzle,
-    #     "swizzle_mx": mx_ctx.swizzle_mx,
-    #     "split_k": opt_flags.split_k,
-    #     "even_k": K % opt_flags.block_k == 0,
-    #     "w_cache_modifier": opt_flags.w_cache_modifier,
-    #     "tokens_per_expt_for_annotation": routing_data.expected_tokens_per_expt,
-    #     "num_warps": opt_flags.num_warps,
-    #     "num_stages": opt_flags.num_stages,
-    #     "arch": opt_flags.arch,
-    #     "upcast_indices": should_upcast_indices(x, w, out0),
-    #     "disable_y_tma": out0.stride(-2) * out0.dtype.itemsize % 16 != 0,
-    #     "swap_xw": swap_xw,
-    #     "num_sms": n_cta,
-    #     "target_kernel_kwargs": opt_flags.target_kernel_kwargs
-    # }
-
-    # print("Kernel parameters:")
-    # print(kernel_params)
-
     (_p_matmul_ogs if opt_flags.is_persistent else _matmul_ogs)[(n_cta,)](
                    flex.out_data.reinterpret(memory["output"]),
                    flex.out_data.reinterpret(out0), *out0.stride(),
