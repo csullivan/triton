@@ -68,8 +68,8 @@ def assert_close(ref, tri, maxtol=None, rmstol=None, description="--", verbose=T
               (num_nonzero, rel_err.numel(), tuple(rel_err.shape), bad_idxs.tolist()))
 
         bad_idxs = bad_idxs.unbind(-1)
-        print("ref values: ", ref[*bad_idxs].cpu())
-        print("tri values: ", tri[*bad_idxs].cpu())
+        print("ref values: ", ref[tuple(bad_idxs)].cpu())
+        print("tri values: ", tri[tuple(bad_idxs)].cpu())
 
     assert max_err <= maxtol
     assert rms_err <= rmstol
@@ -127,10 +127,20 @@ def compute_sanitizer(**target_kwargs):
                     }
                     if "CUDA_VISIBLE_DEVICES" in os.environ:
                         env["CUDA_VISIBLE_DEVICES"] = os.environ["CUDA_VISIBLE_DEVICES"]
-                    assert "request_fixture" in kwargs, (
+
+                    for key, value in os.environ.items():
+                        if key not in env:
+                            env[key] = value
+
+                    assert "request" in kwargs, (
                         "memcheck'ed test must have a (possibly unused) `request` fixture")
-                    test_id = kwargs["request_fixture"].node.callspec.id
-                    cmd = f"{path}::{test_fn.__name__}[{test_id}]"
+                    req = kwargs["request"]
+                    # Handle both parametrized and non-parametrized tests
+                    if hasattr(req.node, "callspec") and hasattr(req.node.callspec, "id"):
+                        test_id = req.node.callspec.id
+                        cmd = f"{path}::{test_fn.__name__}[{test_id}]"
+                    else:
+                        cmd = f"{path}::{test_fn.__name__}"
                     cmd = [
                         "compute-sanitizer",
                         "--target-processes=application-only",
