@@ -16,8 +16,6 @@ def compute_block_n(n: int, arch, precision_config):
     capability = torch.cuda.get_device_capability()[0] if arch is None else int(arch[2:-1])
     # block_n:
     block_n = max(16, min(128, triton.next_power_of_2(n)))
-    if capability >= 9 and precision_config.max_num_imprecise_acc is None and n > 128:
-        block_n = 256
     return block_n
 
 
@@ -28,7 +26,7 @@ def compute_block_k(k: int | None, is_persistent: bool, lhs_dtype, rhs_dtype, mx
     if has_mx_weight_scale:
         rhs_width = 0.5
     # block_k needs to match the cacheline size (128B)
-    block_k = int(128 // min(lhs_width, rhs_width))
+    block_k = int(256 // min(lhs_width, rhs_width))
     # TODO: revisit when Triton is better for H100 + MXFP4
     if rhs_width == 0.5 and not cuda_capability_geq(10, 0):
         block_k = 128
@@ -37,7 +35,7 @@ def compute_block_k(k: int | None, is_persistent: bool, lhs_dtype, rhs_dtype, mx
 
     if cuda_capability_geq(10, 0) and is_persistent and has_mx_weight_scale:
         # Cap block_k to conserve smem to increase num_stages
-        block_k = min(block_k, 128)
+        block_k = min(block_k, 256)
     return block_k
 
 
