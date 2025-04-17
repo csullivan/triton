@@ -328,7 +328,6 @@ def _p_matmul_ogs(
         acc = tl.zeros((BLOCK_N, BLOCK_M) if SWAP_XW else (BLOCK_M, BLOCK_N), dtype=tl.float32)
         for ki in tl.range(k_tiles, disallow_acc_multi_buffer=DISALLOW_ACC_MULTI_BUFFER):
             off_k = pid_k * BLOCK_K + ki * BLOCK_K * SPLIT_K
-            off_k_w = pid_k * PACKED_BLOCK_K_W + ki * PACKED_BLOCK_K_W * SPLIT_K
             off_k_mx = pid_k * MX_SCALE_BLOCK_K + ki * MX_SCALE_BLOCK_K * SPLIT_K
 
             if USE_GATHER_TMA:
@@ -347,7 +346,9 @@ def _p_matmul_ogs(
                     mask_k = tl.arange(0, BLOCK_K) < K - off_k
                     x = tl.load(XPtrs, mask=mask_k[None, :], other=0.0)
 
-            w = _load_tensor_desc(w_desc, [expt_id, off_k_w, off_n], transpose=W_TRANSPOSE)
+            # Note: we use off_k here which spans BLOCK_K and _not_ PACKED_BLOCK_K_W because
+            # we must account for the padding when indexing into the weights
+            w = _load_tensor_desc(w_desc, [expt_id, off_k, off_n], transpose=W_TRANSPOSE)
 
             if is_microscaled_format:
                 x_format: tl.constexpr = get_scaled_dot_format_string(x.dtype)
