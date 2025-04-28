@@ -102,6 +102,7 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
     # -- benchmark --
     if no_proton:
         proton_active = False
+        fpath = None
     else:
         fpath = Path(f"logs/{name}/{batch}-{dim1}-{dim2}-{n_expts_tot}-{n_expts_act}-{x_dtype}-{w_dtype}.hatchet")
         fpath.parent.mkdir(parents=True, exist_ok=True)
@@ -135,7 +136,7 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
     # -- analyze --
     if not Path(f"{fpath}").exists():
         print(f"Proton file {fpath} not found. Skipping analysis.")
-        return "N/A", "N/A", "N/A"
+        return 0.0, 0.0, 0.0
 
     with open(f"{fpath}") as fd:
         data = json.load(fd)
