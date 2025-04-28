@@ -196,6 +196,13 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    original_num_sms = None
+    if args.num_sms is not None:
+        original_num_sms = triton_bench.target_info.num_sms
+        def patched_num_sms():
+            return args.num_sms
+        triton_bench.target_info.num_sms = patched_num_sms
+
 
     if args.dense and args.llama4:
         raise ValueError("Flags --dense and --llama4 are mutually exclusive.")
@@ -215,6 +222,7 @@ if __name__ == "__main__":
     elif args.llama4:
         # LLaMa 4 configuration defaults
         batch_size = 2048 if args.batch_size is None else args.batch_size
+        args.batch_size = batch_size
         dim1 = args.dim1 if args.dim1 is not None else 5120
         dim2 = args.dim2 if args.dim2 is not None else 8192
         n_expts_tot = args.n_expts_tot if args.n_expts_tot is not None else 128
