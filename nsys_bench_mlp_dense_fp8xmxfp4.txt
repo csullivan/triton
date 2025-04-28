@@ -1,0 +1,105 @@
+Running benchmark: dense
+Batch: None, Dim1: 8192, Dim2: 8192
+Experts: 1 total, 1 active
+Dtypes: x=fp8, w=mx4
+Parallelism: TP=1, EP=1
+Iterations: 100, Only first matmul: False, Only second matmul: False
+No proton: True
+Proton file None not found. Skipping analysis.
+Result: Util=0.0, TFLOPS=0.0, TBps=0.0
+Collecting data...
+Generating '/tmp/nsys-report-dc74.qdstrm'
+[1/8] [0%                          ] report106.nsys-rep[1/8] [0%                          ] report106.nsys-rep[1/8] [6%                          ] report106.nsys-rep[1/8] [======35%                   ] report106.nsys-rep[1/8] [=======36%                  ] report106.nsys-rep[1/8] [=======37%                  ] report106.nsys-rep[1/8] [=======38%                  ] report106.nsys-rep[1/8] [========40%                 ] report106.nsys-rep[1/8] [========42%                 ] report106.nsys-rep[1/8] [=========43%                ] report106.nsys-rep[1/8] [==========49%               ] report106.nsys-rep[1/8] [===========50%              ] report106.nsys-rep[1/8] [===========51%              ] report106.nsys-rep[1/8] [===========52%              ] report106.nsys-rep[1/8] [===========53%              ] report106.nsys-rep[1/8] [============54%             ] report106.nsys-rep[1/8] [============55%             ] report106.nsys-rep[1/8] [============56%             ] report106.nsys-rep[1/8] [============57%             ] report106.nsys-rep[1/8] [=============58%            ] report106.nsys-rep[1/8] [=============59%            ] report106.nsys-rep[1/8] [=============60%            ] report106.nsys-rep[1/8] [==============61%           ] report106.nsys-rep[1/8] [==============62%           ] report106.nsys-rep[1/8] [==============63%           ] report106.nsys-rep[1/8] [==============64%           ] report106.nsys-rep[1/8] [===============65%          ] report106.nsys-rep[1/8] [===============66%          ] report106.nsys-rep[1/8] [===============67%          ] report106.nsys-rep[1/8] [================68%         ] report106.nsys-rep[1/8] [================69%         ] report106.nsys-rep[1/8] [================70%         ] report106.nsys-rep[1/8] [================71%         ] report106.nsys-rep[1/8] [=================72%        ] report106.nsys-rep[1/8] [=================73%        ] report106.nsys-rep[1/8] [=================74%        ] report106.nsys-rep[1/8] [==================75%       ] report106.nsys-rep[1/8] [==================76%       ] report106.nsys-rep[1/8] [==================78%       ] report106.nsys-rep[1/8] [======================91%   ] report106.nsys-rep[1/8] [========================100%] report106.nsys-rep[1/8] [========================100%] report106.nsys-rep
+[2/8] [0%                          ] report106.sqlite[2/8] [1%                          ] report106.sqlite[2/8] [2%                          ] report106.sqlite[2/8] [3%                          ] report106.sqlite[2/8] [4%                          ] report106.sqlite[2/8] [5%                          ] report106.sqlite[2/8] [6%                          ] report106.sqlite[2/8] [7%                          ] report106.sqlite[2/8] [8%                          ] report106.sqlite[2/8] [9%                          ] report106.sqlite[2/8] [10%                         ] report106.sqlite[2/8] [11%                         ] report106.sqlite[2/8] [12%                         ] report106.sqlite[2/8] [13%                         ] report106.sqlite[2/8] [14%                         ] report106.sqlite[2/8] [=15%                        ] report106.sqlite[2/8] [=16%                        ] report106.sqlite[2/8] [=17%                        ] report106.sqlite[2/8] [==18%                       ] report106.sqlite[2/8] [==19%                       ] report106.sqlite[2/8] [==20%                       ] report106.sqlite[2/8] [==21%                       ] report106.sqlite[2/8] [===22%                      ] report106.sqlite[2/8] [===23%                      ] report106.sqlite[2/8] [===24%                      ] report106.sqlite[2/8] [====25%                     ] report106.sqlite[2/8] [====26%                     ] report106.sqlite[2/8] [====27%                     ] report106.sqlite[2/8] [====28%                     ] report106.sqlite[2/8] [=====29%                    ] report106.sqlite[2/8] [=====30%                    ] report106.sqlite[2/8] [=====31%                    ] report106.sqlite[2/8] [=====32%                    ] report106.sqlite[2/8] [======33%                   ] report106.sqlite[2/8] [======34%                   ] report106.sqlite[2/8] [======35%                   ] report106.sqlite[2/8] [=======36%                  ] report106.sqlite[2/8] [=======37%                  ] report106.sqlite[2/8] [=======38%                  ] report106.sqlite[2/8] [=======39%                  ] report106.sqlite[2/8] [========40%                 ] report106.sqlite[2/8] [========41%                 ] report106.sqlite[2/8] [========42%                 ] report106.sqlite[2/8] [=========43%                ] report106.sqlite[2/8] [=========44%                ] report106.sqlite[2/8] [=========45%                ] report106.sqlite[2/8] [=========46%                ] report106.sqlite[2/8] [==========47%               ] report106.sqlite[2/8] [==========48%               ] report106.sqlite[2/8] [==========49%               ] report106.sqlite[2/8] [===========50%              ] report106.sqlite[2/8] [===========51%              ] report106.sqlite[2/8] [===========52%              ] report106.sqlite[2/8] [===========53%              ] report106.sqlite[2/8] [============54%             ] report106.sqlite[2/8] [============55%             ] report106.sqlite[2/8] [============56%             ] report106.sqlite[2/8] [============57%             ] report106.sqlite[2/8] [=============58%            ] report106.sqlite[2/8] [=============59%            ] report106.sqlite[2/8] [=============60%            ] report106.sqlite[2/8] [==============61%           ] report106.sqlite[2/8] [==============62%           ] report106.sqlite[2/8] [==============63%           ] report106.sqlite[2/8] [==============64%           ] report106.sqlite[2/8] [===============65%          ] report106.sqlite[2/8] [===============66%          ] report106.sqlite[2/8] [===============67%          ] report106.sqlite[2/8] [================68%         ] report106.sqlite[2/8] [================69%         ] report106.sqlite[2/8] [================70%         ] report106.sqlite[2/8] [================71%         ] report106.sqlite[2/8] [=================72%        ] report106.sqlite[2/8] [=================73%        ] report106.sqlite[2/8] [=================74%        ] report106.sqlite[2/8] [==================75%       ] report106.sqlite[2/8] [==================76%       ] report106.sqlite[2/8] [==================77%       ] report106.sqlite[2/8] [==================78%       ] report106.sqlite[2/8] [===================79%      ] report106.sqlite[2/8] [===================80%      ] report106.sqlite[2/8] [===================81%      ] report106.sqlite[2/8] [===================82%      ] report106.sqlite[2/8] [====================83%     ] report106.sqlite[2/8] [====================84%     ] report106.sqlite[2/8] [====================85%     ] report106.sqlite[2/8] [=====================86%    ] report106.sqlite[2/8] [=====================87%    ] report106.sqlite[2/8] [=====================88%    ] report106.sqlite[2/8] [=====================89%    ] report106.sqlite[2/8] [======================90%   ] report106.sqlite[2/8] [======================91%   ] report106.sqlite[2/8] [======================92%   ] report106.sqlite[2/8] [=======================93%  ] report106.sqlite[2/8] [=======================94%  ] report106.sqlite[2/8] [=======================95%  ] report106.sqlite[2/8] [=======================96%  ] report106.sqlite[2/8] [========================97% ] report106.sqlite[2/8] [========================98% ] report106.sqlite[2/8] [========================99% ] report106.sqlite[2/8] [========================100%] report106.sqlite[2/8] [========================100%] report106.sqlite
+SKIPPED: /home/scratch.chrsullivan_gpu/projects/triton-private-blackwell-2/report106.sqlite does not contain NV Tools Extension (NVTX) data.
+[3/8] Executing 'nvtx_sum' stats report
+[4/8] Executing 'osrt_sum' stats report
+
+ Time (%)  Total Time (ns)  Num Calls   Avg (ns)     Med (ns)   Min (ns)  Max (ns)   StdDev (ns)           Name         
+ --------  ---------------  ---------  -----------  ----------  --------  ---------  -----------  ----------------------
+     48.5       8411467978        434   19381262.6  10088056.0      1088  246552800   28878375.0  poll                  
+     20.4       3541975046         29  122137070.6  64994870.0     42344  395481085  132720866.1  waitpid               
+     13.9       2407152493        139   17317643.8   1309771.0    229841  366504895   67056535.1  pthread_cond_wait     
+      7.9       1368565935       1389     985288.7    839344.0      1210    3720485     545338.5  open64                
+      2.8        480179080       2177     220569.2      1852.0      1007    3710568     466505.6  open                  
+      2.7        469289839       1961     239311.5      2547.0      1000  244656308    5710302.2  read                  
+      1.6        281800727        979     287845.5     14912.0      1001   41311157    2129676.4  ioctl                 
+      1.5        253560965         18   14086720.3   3262383.0     51069   60254142   19274227.6  pthread_join          
+      0.3         58486825        630      92836.2      1695.0      1001    3852324     425025.6  close                 
+      0.1         17398003          4    4349500.8      7180.5      1370   17382272    8688515.0  getdelim              
+      0.1         15249150          3    5083050.0   5083115.0   5082003    5084032       1016.1  nanosleep             
+      0.1         11864576         24     494357.3    451662.5    368867     811369     140939.2  pthread_create        
+      0.0          6956270          4    1739067.5   1791698.5   1500659    1872214     163527.8  posix_spawn           
+      0.0          5708796         96      59466.6      8001.5      3678    2291947     322742.5  mmap64                
+      0.0          5366277         37     145034.5      3406.0      1362    5224496     858255.7  pipe2                 
+      0.0          4097435        323      12685.6      1921.0      1000    2227461     138091.7  stat                  
+      0.0          2686965         14     191926.1    163772.0    153364     542253     101528.4  sem_timedwait         
+      0.0          2439496         37      65932.3      2945.0      1128     639027     171401.6  fclose                
+      0.0          2050213        243       8437.1      7953.0      1226      32567       3251.3  fgets                 
+      0.0          1826216         29      62973.0     63363.0     59479      63761       1088.8  sleep                 
+      0.0          1504626        178       8453.0      6040.0      1773      69574       7525.4  mmap                  
+      0.0           990646         55      18011.7     13375.0      1045      78715      18634.8  write                 
+      0.0           861209          9      95689.9     14743.0      1624     784536     258385.3  fopen64               
+      0.0           647574        116       5582.5      2179.5      1005      60876      10074.5  fopen                 
+      0.0           274640         18      15257.8      2714.5      1414      91777      26969.6  fwrite                
+      0.0           232583        121       1922.2      2007.0      1007       7160        725.7  fstat                 
+      0.0           208209         52       4004.0      1693.0      1108      16807       4625.7  fread                 
+      0.0           133912         13      10300.9      4987.0      1497      28845       8957.0  munmap                
+      0.0            87552         43       2036.1      2015.0      1038       5237        780.3  pthread_cond_signal   
+      0.0            85124         43       1979.6      1876.0      1033       3386        530.2  pthread_cond_broadcast
+      0.0            70614         12       5884.5      3103.0      1580      15620       5242.3  putc                  
+      0.0            33230          8       4153.8      2008.0      1643      16638       5122.9  fputs                 
+      0.0            28111          9       3123.4      4199.0      1062       5453       1833.2  lstat                 
+      0.0            25204          4       6301.0      4453.5      4198      12099       3867.4  getc                  
+      0.0            23105          1      23105.0     23105.0     23105      23105          0.0  pthread_mutex_lock    
+      0.0            13146          4       3286.5      3731.0      1097       4587       1547.2  fflush                
+      0.0            12413          2       6206.5      6206.5      5689       6724        731.9  socket                
+      0.0             9381          3       3127.0      3345.0      2578       3458        478.8  fflush_unlocked       
+      0.0             7995          3       2665.0      1229.0      1139       5627       2565.6  sigaction             
+      0.0             7522          3       2507.3      2232.0      2176       3114        526.1  fwrite_unlocked       
+      0.0             7180          1       7180.0      7180.0      7180       7180          0.0  connect               
+      0.0             4886          1       4886.0      4886.0      4886       4886          0.0  fcntl                 
+      0.0             3006          1       3006.0      3006.0      3006       3006          0.0  signal                
+      0.0             2851          1       2851.0      2851.0      2851       2851          0.0  mprotect              
+      0.0             1528          1       1528.0      1528.0      1528       1528          0.0  bind                  
+      0.0             1379          1       1379.0      1379.0      1379       1379          0.0  fputs_unlocked        
+      0.0             1338          1       1338.0      1338.0      1338       1338          0.0  pread                 
+
+[5/8] Executing 'cuda_api_sum' stats report
+
+ Time (%)  Total Time (ns)  Num Calls  Avg (ns)   Med (ns)   Min (ns)  Max (ns)  StdDev (ns)                        Name                      
+ --------  ---------------  ---------  ---------  ---------  --------  --------  -----------  ------------------------------------------------
+     78.7         18146693         14  1296192.4     7835.0      3114  15679922    4162362.9  cudaLaunchKernel                                
+      9.9          2276313          1  2276313.0  2276313.0   2276313   2276313          0.0  cudaGetDeviceProperties_v2_v12000               
+      4.9          1125345        302     3726.3     3504.0      2849     14630       1308.9  cuLaunchKernel                                  
+      4.7          1090128          8   136266.0   151386.5     78690    180586      38710.6  cudaMalloc                                      
+      1.0           241415          4    60353.8    61214.5     51262     67724       7054.9  cuModuleLoadData                                
+      0.4            82345          1    82345.0    82345.0     82345     82345          0.0  cudaDeviceSynchronize                           
+      0.3            57834        419      138.0      107.0        61       726         82.2  cuGetProcAddress_v2                             
+      0.1            19285         22      876.6      304.0       179      7123       1516.0  cudaStreamIsCapturing_v10000                    
+      0.0             7684         18      426.9      283.5       278      2670        560.7  cudaOccupancyMaxActiveClusters_v11070           
+      0.0             2143          1     2143.0     2143.0      2143      2143          0.0  cudaOccupancyAvailableDynamicSMemPerBlock_v10200
+      0.0             1678          2      839.0      839.0       707       971        186.7  cuInit                                          
+      0.0              861          2      430.5      430.5       112       749        450.4  cuModuleGetLoadingMode                          
+      0.0              846          2      423.0      423.0       327       519        135.8  cudaGetDriverEntryPoint_v11030          SKIPPED: /home/scratch.chrsullivan_gpu/projects/triton-private-blackwell-2/report106.sqlite does not contain GPU memory data.
+SKIPPED: /home/scratch.chrsullivan_gpu/projects/triton-private-blackwell-2/report106.sqlite does not contain GPU memory data.
+        
+
+[6/8] Executing 'cuda_gpu_kern_sum' stats report
+
+ Time (%)  Total Time (ns)  Instances  Avg (ns)  Med (ns)  Min (ns)  Max (ns)  StdDev (ns)                                                  Name                                                
+ --------  ---------------  ---------  --------  --------  --------  --------  -----------  ----------------------------------------------------------------------------------------------------
+     62.0         41715250        100  417152.5  414682.0    409178    434681       6789.7  first_mlp_matmul__matmul_ptma_NNT_fp8e4nvxfp8e4nvxmxfp4_128x256x128x1                               
+     31.2         20979333        100  209793.3  207516.5    205181    222557       5035.8  second_mlp_matmul__matmul_ptma_NNT_fp8e4nvxfp8e4nvxmxfp4_128x256x128x1                              
+      4.9          3301203        100   33012.0   32832.0     32096     34912        648.3  _swiglu_fp8e4nvxfp8e4nv_32x128                                                                      
+      1.0           700758          2  350379.0  350379.0    234813    465945     163435.0  _downcast_to_mxfp                                                                                   
+      0.5           345947          7   49421.0    2464.0      2144    135102      62683.4  void at::native::<unnamed>::distribution_elementwise_grid_stride_kernel<float, (int)4, void at::nat…
+      0.2           121054          2   60527.0   60527.0     59199     61855       1878.1  void at::native::vectorized_elementwise_kernel<(int)4, at::native::float8_copy_kernel_cuda(at::Tens…
+      0.1            92063          3   30687.7   28352.0      2912     60799      29014.1  void at::native::vectorized_elementwise_kernel<(int)8, at::native::bfloat16_copy_kernel_cuda(at::Te…
+      0.0            14272          2    7136.0    7136.0      5600      8672       2172.2  void at::native::elementwise_kernel<(int)128, (int)4, void at::native::gpu_kernel_impl_nocast<at::n…
+
+[7/8] Executing 'cuda_gpu_mem_time_sum' stats report
+[8/8] Executing 'cuda_gpu_mem_size_sum' stats report
+Generated:
+	/home/scratch.chrsullivan_gpu/projects/triton-private-blackwell-2/report106.nsys-rep
+	/home/scratch.chrsullivan_gpu/projects/triton-private-blackwell-2/report106.sqlite
