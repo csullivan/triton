@@ -72,7 +72,6 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
               # tensor / expert parallelism
               TP=1, EP=1, name="",
               # flags
-              only_first_matmul=False, only_second_matmul=False,
               num_iterations=100, no_proton=False):
     assert n_expts_tot % EP == 0
     assert dim2 % TP == 0
@@ -188,8 +187,7 @@ if __name__ == "__main__":
     parser.add_argument('--fp8xfp8', action='store_true', help='Use fp8 for activations and weights')
 
     # Benchmark control flags
-    parser.add_argument('--only_first_matmul', action='store_true', help='Run only the first matmul operation')
-    parser.add_argument('--only_second_matmul', action='store_true', help='Run only the second matmul operation')
+
     parser.add_argument('--num_iterations', type=int, default=100, help='Number of iterations for the benchmark loop')
     parser.add_argument('--no_proton', action='store_true', help='Disable proton profiling')
     parser.add_argument('--num_sms', type=int, default=None, help='Number of SMs (informational)')
@@ -198,9 +196,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # --- Validate mutually exclusive flags ---
-    if args.only_first_matmul and args.only_second_matmul:
-        raise ValueError("Flags --only_first_matmul and --only_second_matmul are mutually exclusive.")
 
     if args.dense and args.llama4:
         raise ValueError("Flags --dense and --llama4 are mutually exclusive.")
@@ -251,7 +246,7 @@ if __name__ == "__main__":
     print(f"Experts: {n_expts_tot} total, {n_expts_act} active")
     print(f"Dtypes: x={x_dtype}, w={w_dtype}")
     print(f"Parallelism: TP={tp}, EP={ep}")
-    print(f"Iterations: {args.num_iterations}, Only first matmul: {args.only_first_matmul}, Only second matmul: {args.only_second_matmul}")
+    print(f"Iterations: {args.num_iterations}")
     print(f"No proton: {args.no_proton}")
 
     util, tflops, tbps = bench_mlp(
@@ -265,8 +260,6 @@ if __name__ == "__main__":
         TP=tp,
         EP=ep,
         name=run_name,
-        only_first_matmul=args.only_first_matmul,
-        only_second_matmul=args.only_second_matmul,
         num_iterations=args.num_iterations,
         no_proton=args.no_proton
     )
