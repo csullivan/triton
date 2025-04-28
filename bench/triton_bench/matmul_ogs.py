@@ -421,6 +421,7 @@ def matmul_ogs(x, w, bias,
                gammas: torch.Tensor | None = None,
                out_alpha: float | None = None,
                y: torch.Tensor | None = None,
+               role_tag: int = -1,
                ):
     """
     Y[:, :] = 0.
@@ -542,7 +543,7 @@ def matmul_ogs(x, w, bias,
                    DISABLE_Y_TMA=out0.stride(-2) * out0.dtype.itemsize % 16 != 0,
                    SWAP_XW=swap_xw,
                    NUM_SMS = n_cta,
-                   **opt_flags.target_kernel_kwargs)
+                   **opt_flags.target_kernel_kwargs, ROLE_TAG=role_tag)
     # post-processing
     out = apply_postprocessing_features(scatter_indx, opt_flags, expt_data.offs,
                                 num_indx, precision_config, routing_data,

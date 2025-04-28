@@ -121,13 +121,14 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
         proton.start(str(fpath.with_suffix('')), hook="triton")
     for i in range(num_iterations):
         if n_expts_tot > 1:
-            logits = matmul_ogs(xg, wg, bg, precision_config=pcg)
+            logits = matmul_ogs(xg, wg, bg, precision_config=pcg, role_tag=0)
             rdata, gather_indx, scatter_indx = routing(logits, n_expts_act, simulated_ep=EP)
         else:
-            rdata, gather_indx, scatter_indx = None, None, None
-        x = matmul_ogs(x, w1, b1, rdata, gather_indx=gather_indx, precision_config=pc1)
+            rdata = gather_indx = scatter_indx = None
+        x = matmul_ogs(x, w1, b1, rdata, gather_indx=gather_indx, precision_config=pc1, role_tag=1)
         x = triton_bench.swiglu.swiglu(x, 1.0, pcs)
-        x = matmul_ogs(x, w2, b2, rdata, scatter_indx=scatter_indx, precision_config=pc2)
+        x = matmul_ogs(x, w2, b2, rdata, scatter_indx=scatter_indx, precision_config=pc2, role_tag=2)
+
     if proton_active:
         proton.finalize()
 

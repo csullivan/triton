@@ -58,8 +58,13 @@ def make_matmul_repr(base_name, order):
         suffix = "" if not mode else "_o" + (''.join(mode))
         if base_name.startswith("_p"):
             suffix += "_ptma"
-        return f"_matmul{suffix}_{layouts}_{dtypes}_{blocks}"
-
+        # Additional layer semantic prefixes
+        tag_to_prefix = {0: "routing_matmul",
+                         1: "first_mlp_matmul",
+                         2: "second_mlp_matmul"}
+        prefix = tag_to_prefix.get(constants.get("ROLE_TAG", -1), "")
+        kernel_name = f"_matmul{suffix}_{layouts}_{dtypes}_{blocks}"
+        return f"{prefix}_{kernel_name}" if prefix else kernel_name
     return matmul_repr
 
 
