@@ -122,53 +122,61 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
         proton.start(str(fpath.with_suffix('')), hook="triton")
     for i in range(num_iterations):
         if n_expts_tot > 1:
-            # print(f"xg.shape: {xg.shape}")          # → torch.Size([2048, 5120])
-            # print(f"wg.shape: {wg.shape}")          # → torch.Size([5120, 128])
-            # print(f"bg.shape: {bg.shape}")          # → torch.Size([128])
+            # — Gate —
+            # xg: [2048, 5120]
+            # wg: [5120, 128]
+            # bg: [128]
             logits = matmul_ogs(xg, wg, bg, precision_config=pcg, role_tag=0)
-            # print(f"logits.shape: {logits.shape}")  # → torch.Size([2048, 128])
+            # logits: [2048, 128]
+
             rdata, gather_indx, scatter_indx = routing(logits, n_expts_act, simulated_ep=EP)
-            # rdata.gate_scal.shape:   torch.Size([8192])
-            # rdata.expt_hist.shape:   torch.Size([128])
-            # gather_indx.src_indx.shape: torch.Size([8192])
-            # gather_indx.dst_indx.shape: torch.Size([8192])
-            # scatter_indx.src_indx.shape: torch.Size([8192])
-            # scatter_indx.dst_indx.shape: torch.Size([8192])
+            # gather_indx.src_indx : [8192]   (2048 tokens × 4 experts)
+            # scatter_indx.*       : [8192]
+            # rdata.gate_scal      : [8192]   (router soft-weights per (token,expert))
+            # rdata.expt_hist      : [128]    (how many tokens routed to each expert)
         else:
             rdata = gather_indx = scatter_indx = None
 
-        # print(f"x.shape: {x.shape}")    # → torch.Size([2048, 5120])
-        # print(f"w1.shape: {w1.shape}")  # → torch.Size([128, 2560, 2048])
-                                          #    [n_experts, in_feats=2560, out_feats=2048]
-        # print(f"b1.shape: {b1.shape}")  # → torch.Size([2048])
-                                          #    bias per out_feat (2048)
+        # — Expert FC1 —
+        # x before gather  : [2048, 5120]
+        # w1               : [128, 2560, 2048]   (in=2560, out=2048)
+        # b1               : [2048]              (matches out_features)
+
+        # kernel path:
+        #   1) gather 4x token vectors from input x, 4 experts per token → [8192, 5120]
+        #   2) take the expert's *fixed* slice of input x (0..2559 or 2560..5119) → [8192, 2560]
+        #   3) matmul for each expert that has assigned token vectors [2560, 2048] → [8192, 2048]
+        #      * Note that each expert can have a different number of the 8192 rows assigned to it
+
         x = matmul_ogs(
             x, w1, b1,
-            rdata, gather_indx=gather_indx,
-            precision_config=pc1, role_tag=1
-        )
-        # print(f"x.shape: {x.shape}")    # → torch.Size([8192, 2048])
-                                          #    after gather&slice ([2048,4,2560])
-                                          #    → flatten ([8192,2560])
-                                          #    → matmul to 2048-dim
+            rdata,
+            gather_indx=gather_indx,
+            precision_config=pc1,
+            role_tag=1)
+        # x after FC1, pre-SWIGLU : [8192, 2048]
 
         x = triton_bench.swiglu.swiglu(x, 1.0, pcs)
-        # print(f"x.shape: {x.shape}")    # → torch.Size([8192, 1024])
-                                          #    SWIGLU halves 2048→1024
+        # x after SWIGLU           : [8192, 1024]
 
-        # print(f"w2.shape: {w2.shape}")  # → torch.Size([128, 512, 5120])
-                                          #    [n_experts, in_feats=512, out_feats=5120]
-        # print(f"b2.shape: {b2.shape}")  # → torch.Size([5120])
-                                          #    bias per out_feat (5120)
+        # — Expert FC2 —
+        # w2 : [128,  512, 5120]   (in=512,  out=5120)
+        # b2 : [5120]
+
+        # kernel path:
+        #   1) flatten rows           : [8192, 1024]
+        #   2) slice per expert       : [8192,  512]       # ←  halves the 1024 features
+        #      matmul per expert      : [8192, 5120]       # ←  in=512, out=5120
+        #   3) scatter back           : [2048, 5120]
+
         x = matmul_ogs(
             x, w2, b2,
-            rdata, scatter_indx=scatter_indx,
-            precision_config=pc2, role_tag=2
-        )
-        # print(f"x.shape: {x.shape}")    # → torch.Size([2048, 5120])
-                                          #    after flatten ([8192,512])
-                                          #    → matmul to 5120-dim
-                                          #    → scatter back to [2048,5120]
+            rdata,
+            scatter_indx=scatter_indx,
+            precision_config=pc2,
+            role_tag=2)
+
+        # x after FC2             : [2048, 5120]
     if proton_active:
         proton.finalize()
 

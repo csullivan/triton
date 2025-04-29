@@ -104,6 +104,7 @@ def _load_tile_attrs(
         tl.static_assert(M is None)
         expt_data = tl.load(ExptData + pid_m)
         expt_id = expt_data & 0x0000FFFF
+        # Block ID selects which K-tile of the input features to use
         block_id = expt_data >> 16
         eM = tl.load(ExptHist + expt_id)
         start_m = tl.load(ExptOffs + expt_id)
