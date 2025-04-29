@@ -139,7 +139,7 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
 
         # — Expert FC1 —
         # x before gather  : [2048, 5120]
-        # w1               : [128, 2560, 2048]   (in=2560, out=2048)
+        # w1               : [128, 2560, 2048]   (in=2560, out=2048=8192//TP)
         # b1               : [2048]              (matches out_features)
 
         # kernel path:
@@ -160,7 +160,7 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
         # x after SWIGLU           : [8192, 1024]
 
         # — Expert FC2 —
-        # w2 : [128,  512, 5120]   (in=512,  out=5120)
+        # w2 : [128,  512, 5120]   (in=512=2048//TP,  out=5120)
         # b2 : [5120]
 
         # kernel path:
