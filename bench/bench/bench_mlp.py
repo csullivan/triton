@@ -72,7 +72,7 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
               # tensor / expert parallelism
               TP=1, EP=1, name="",
               # flags
-              num_iterations=100, no_proton=False):
+              num_iterations=100, no_proton=False, logits_mode="default"):
     assert n_expts_tot % EP == 0
     assert dim2 % TP == 0
     dev = "cuda"
@@ -129,7 +129,29 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
             logits = matmul_ogs(xg, wg, bg, precision_config=pcg, role_tag=0)
             # logits: [2048, 128]
 
+            if logits_mode == "best_case":
+                # Fake the logits so that only n_expts_act experts are active each with M_per_expert = 2048
+                fake_logits = torch.full_like(logits, float('-inf'))
+                fake_logits[:, :n_expts_act] = 0.0
+                logits = fake_logits
+            elif logits_mode == "even_case":
+                # Even distribution:
+                # tokens_per_expert = (num_tokens * n_expts_act) // n_expts_tot  # 64 for default
+                # Assign *distinct* experts per token so that each expert is chosen
+                # exactly tokens_per_expert times overall, and every token has
+                # `n_expts_act` different experts.
+                num_tokens = logits.size(0)
+                fake_logits = torch.full_like(logits, float('-inf'))
+                rows = torch.arange(num_tokens, device=logits.device).unsqueeze(1)   # [T,1]
+                base = (rows * n_expts_act) % n_expts_tot                            # [T,1]
+                offsets = torch.arange(n_expts_act, device=logits.device)            # [K]
+                assignments = (base + offsets) % n_expts_tot                         # [T,K]
+
+                fake_logits[rows.expand_as(assignments), assignments] = 0.0
+                logits = fake_logits
+
             rdata, gather_indx, scatter_indx = routing(logits, n_expts_act, simulated_ep=EP)
+
             # gather_indx.src_indx : [8192]   (2048 tokens × 4 experts)
             # scatter_indx.*       : [8192]
             # rdata.gate_scal      : [8192]   (router soft-weights per (token,expert))
@@ -145,7 +167,7 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
         # kernel path:
         #   1) gather 4x token vectors from input x, 4 experts per token → [8192, 5120]
         #   2) take the expert's *fixed* slice of input x (0..2559 or 2560..5119) → [8192, 2560]
-        #   3) matmul for each expert that has assigned token vectors [2560, 2048] → [8192, 2048]
+        #   3) matmul for each expert that has assigned token vectors x[M_per_expert, 5120//2] @ [2560, 2048] → [8192, 2048]
         #      * Note that each expert can have a different number of the 8192 rows assigned to it
 
         x = matmul_ogs(
@@ -238,6 +260,8 @@ if __name__ == "__main__":
     parser.add_argument('--num_iterations', type=int, default=100, help='Number of iterations for the benchmark loop')
     parser.add_argument('--no_proton', action='store_true', help='Disable proton profiling')
     parser.add_argument('--num_sms', type=int, default=None, help='Number of SMs (informational)')
+    parser.add_argument('--logits', type=str, default="default", choices=["default", "best_case", "even_case"],
+                        help='Logits manipulation mode: default=no manipulation, best_case=only n_expts_act experts active, even_case=even distribution across experts')
 
     parser.add_argument('--name', type=str, default="benchmark", help='Name for the benchmark run')
 
@@ -316,7 +340,8 @@ if __name__ == "__main__":
         EP=ep,
         name=run_name,
         num_iterations=args.num_iterations,
-        no_proton=args.no_proton
+        no_proton=args.no_proton,
+        logits_mode=args.logits
     )
 
     print(f"Result: Util={util}, TFLOPS={tflops}, TBps={tbps}")
