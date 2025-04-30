@@ -283,6 +283,7 @@ if __name__ == "__main__":
     if args.dense:
         # Dense configuration defaults
         batch_size = 8192 if args.batch_size is None else args.batch_size
+        args.batch_size = batch_size
         dim1 = args.dim1 if args.dim1 is not None else 8192
         dim2 = args.dim2 if args.dim2 is not None else 8192
         n_expts_tot = args.n_expts_tot if args.n_expts_tot is not None else 1
