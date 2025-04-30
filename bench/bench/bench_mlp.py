@@ -67,7 +67,7 @@ def quantize(w, dtype, dev, **opt):
         return w, InFlexData(), MicroscalingCtx(weight_scale=mx_scales, swizzle_mx=swizzle_mx_scale,
                                                 actual_weight_scale_shape=weight_scale_shape)
 
-def fake_logits(logits, logits_mode):
+def custom_logits(logits, logits_mode):
     if logits_mode == "best_case":
         # Fake the logits so that only n_expts_act experts are active each with M_per_expert = 2048
         fake_logits = torch.full_like(logits, float('-inf'))
@@ -187,8 +187,8 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
             logits = matmul_ogs(xg, wg, bg, precision_config=pcg, role_tag=0)
             # logits: [2048, 128]
 
-            if logits_mode:
-                logits = fake_logits(logits, logits_mode)
+            if logits_mode != "default":
+                logits = custom_logits(logits, logits_mode)
 
             rdata, gather_indx, scatter_indx = routing(logits, n_expts_act, simulated_ep=EP)
 
