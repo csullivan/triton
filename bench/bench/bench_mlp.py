@@ -67,6 +67,64 @@ def quantize(w, dtype, dev, **opt):
         return w, InFlexData(), MicroscalingCtx(weight_scale=mx_scales, swizzle_mx=swizzle_mx_scale,
                                                 actual_weight_scale_shape=weight_scale_shape)
 
+def fake_logits(logits, logits_mode):
+    if logits_mode == "best_case":
+        # Fake the logits so that only n_expts_act experts are active each with M_per_expert = 2048
+        fake_logits = torch.full_like(logits, float('-inf'))
+        fake_logits[:, :n_expts_act] = 0.0
+
+    elif logits_mode == "even_case":
+        # Even distribution:
+        # tokens_per_expert = (num_tokens * n_expts_act) // n_expts_tot  # 64 for default
+        # Assign *distinct* experts per token so that each expert is chosen
+        # exactly tokens_per_expert times overall, and every token has
+        # `n_expts_act` different experts.
+        num_tokens = logits.size(0)
+        fake_logits = torch.full_like(logits, float('-inf'))
+        rows = torch.arange(num_tokens, device=logits.device).unsqueeze(1)   # [T,1]
+        base = (rows * n_expts_act) % n_expts_tot                            # [T,1]
+        offsets = torch.arange(n_expts_act, device=logits.device)            # [K]
+        assignments = (base + offsets) % n_expts_tot                         # [T,K]
+
+        fake_logits[rows.expand_as(assignments), assignments] = 0.0
+    elif logits_mode == "long_tail_case":
+        # Long‑tail distribution:
+        #   – First K (= n_expts_act) experts are “hot”.
+        #   – Every other expert gets at most one (token,expert) pair.
+        #   – Remaining pairs are split evenly across the hot experts.
+        #   – Per‑token expert set remains unique of size K.
+        num_tokens = logits.size(0)
+        K          = n_expts_act
+        n_hot      = K
+        n_cold     = n_expts_tot - n_hot
+        total_pairs = num_tokens * K
+        fake_logits = torch.full_like(logits, float('-inf'))
+
+        # desired per‑expert counts
+        cold_each  = 1 if n_cold > 0 else 0
+        cold_pairs = cold_each * n_cold
+        hot_pairs_left = total_pairs - cold_pairs
+        hot_each, extra = divmod(hot_pairs_left, n_hot)
+        tokens_per_expert = [hot_each + (1 if i < extra else 0) for i in range(n_hot)] + \
+                            [cold_each] * n_cold
+
+        # build assignments row‑by‑row ensuring uniqueness within each token
+        assignments = torch.empty((num_tokens, K), dtype=torch.long, device=logits.device)
+        next_exp = 0
+        for t in range(num_tokens):
+            used = set()
+            for k in range(K):
+                while tokens_per_expert[next_exp] == 0 or next_exp in used:
+                    next_exp = (next_exp + 1) % n_expts_tot
+                assignments[t, k] = next_exp
+                tokens_per_expert[next_exp] -= 1
+                used.add(next_exp)
+                next_exp = (next_exp + 1) % n_expts_tot
+
+        # stamp zeros
+        rows = torch.arange(num_tokens, device=logits.device).unsqueeze(1).expand_as(assignments)
+        fake_logits[rows, assignments] = 0.0
+    return fake_logits
 
 def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
               # tensor / expert parallelism
@@ -129,26 +187,8 @@ def bench_mlp(batch, dim1, dim2, n_expts_tot, n_expts_act, x_dtype, w_dtype,
             logits = matmul_ogs(xg, wg, bg, precision_config=pcg, role_tag=0)
             # logits: [2048, 128]
 
-            if logits_mode == "best_case":
-                # Fake the logits so that only n_expts_act experts are active each with M_per_expert = 2048
-                fake_logits = torch.full_like(logits, float('-inf'))
-                fake_logits[:, :n_expts_act] = 0.0
-                logits = fake_logits
-            elif logits_mode == "even_case":
-                # Even distribution:
-                # tokens_per_expert = (num_tokens * n_expts_act) // n_expts_tot  # 64 for default
-                # Assign *distinct* experts per token so that each expert is chosen
-                # exactly tokens_per_expert times overall, and every token has
-                # `n_expts_act` different experts.
-                num_tokens = logits.size(0)
-                fake_logits = torch.full_like(logits, float('-inf'))
-                rows = torch.arange(num_tokens, device=logits.device).unsqueeze(1)   # [T,1]
-                base = (rows * n_expts_act) % n_expts_tot                            # [T,1]
-                offsets = torch.arange(n_expts_act, device=logits.device)            # [K]
-                assignments = (base + offsets) % n_expts_tot                         # [T,K]
-
-                fake_logits[rows.expand_as(assignments), assignments] = 0.0
-                logits = fake_logits
+            if logits_mode:
+                logits = fake_logits(logits, logits_mode)
 
             rdata, gather_indx, scatter_indx = routing(logits, n_expts_act, simulated_ep=EP)
 
@@ -260,7 +300,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_iterations', type=int, default=100, help='Number of iterations for the benchmark loop')
     parser.add_argument('--no_proton', action='store_true', help='Disable proton profiling')
     parser.add_argument('--num_sms', type=int, default=None, help='Number of SMs (informational)')
-    parser.add_argument('--logits', type=str, default="default", choices=["default", "best_case", "even_case"],
+    parser.add_argument('--logits', type=str, default="default", choices=["default", "best_case", "even_case", "long_tail_case"],
                         help='Logits manipulation mode: default=no manipulation, best_case=only n_expts_act experts active, even_case=even distribution across experts')
 
     parser.add_argument('--name', type=str, default="benchmark", help='Name for the benchmark run')
